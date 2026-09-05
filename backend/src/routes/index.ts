@@ -8,6 +8,7 @@ import fulfillmentRouter from './fulfillment.route';
 import adminRouter from './admin.route';
 import billingRouter from './billing.route';
 import quotationRouter from './quotation.route';
+import approvalRouter from './approval.route';
 
 const apiRouter = Router();
 
@@ -21,5 +22,6 @@ apiRouter.use('/fulfillment', fulfillmentRouter);
 apiRouter.use('/admin', adminRouter);
 apiRouter.use('/billing', billingRouter);
 apiRouter.use('/quotations', quotationRouter);
+apiRouter.use('/approvals', approvalRouter);
 
 export default apiRouter;

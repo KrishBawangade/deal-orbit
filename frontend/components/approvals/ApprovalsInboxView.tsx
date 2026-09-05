@@ -30,8 +30,7 @@ type TabType = "PENDING" | "HIGH_RISK" | "APPROVED" | "REVISIONS";
 
 export function isAwaitingSalesManager(q: QuotationRecord): boolean {
   if (q.status !== "IN_REVIEW") return false;
-  // In single-tier and two-tier approvals, if it is in review and has not yet reached Finance or Completed,
-  // it is waiting on Sales Manager Tier-1 review
+  if (q.auditTrail?.some((a) => a.action?.startsWith("APPROVED"))) return false;
   return q.approvalStage !== "FINANCE" && q.approvalStage !== "COMPLETED";
 }
 
@@ -69,25 +68,11 @@ function checkQuoteTabEligibility(
     }
 
     case "APPROVED": {
-      const isApproved = q.status === "APPROVED" || q.approvalStage === "COMPLETED";
-      if (!isApproved) return false;
-      if (role === "FINANCE_OPS") {
-        return (
-          q.approvalRequirement === "DUAL_REQUIRED" ||
-          q.approvalRequirement === "FINANCE_REQUIRED" ||
-          q.riskScore > 50 ||
-          Boolean(q.auditTrail?.some((a) => a.actorRole === "FINANCE_OPS"))
-        );
-      }
-      if (role === "SALES_MANAGER") {
-        return (
-          q.approvalRequirement === "MANAGER_REQUIRED" ||
-          q.approvalRequirement === "DUAL_REQUIRED" ||
-          Boolean(q.auditTrail?.some((a) => a.actorRole === "SALES_MANAGER")) ||
-          q.approvalStage === "COMPLETED"
-        );
-      }
-      return true;
+      return (
+        q.status === "APPROVED" ||
+        q.approvalStage === "COMPLETED" ||
+        Boolean(q.auditTrail?.some((a) => a.action?.startsWith("APPROVED")))
+      );
     }
 
     case "REVISIONS": {
@@ -424,8 +409,16 @@ export default function ApprovalsInboxView({ initialQuoteId }: ApprovalsInboxVie
 
                   <div>
                     <span className="block text-[10px] font-medium uppercase tracking-wider">Current Stage</span>
-                    <span className="font-semibold text-indigo-600">
-                      {isAwaitingFinance(quote)
+                    <span
+                      className={`font-semibold ${
+                        quote.status === "APPROVED" || quote.approvalStage === "COMPLETED"
+                          ? "text-emerald-600"
+                          : "text-indigo-600"
+                      }`}
+                    >
+                      {quote.status === "APPROVED" || quote.approvalStage === "COMPLETED"
+                        ? "Approved"
+                        : isAwaitingFinance(quote)
                         ? "Pending Finance Director"
                         : isAwaitingSalesManager(quote)
                         ? "Pending Sales Manager"

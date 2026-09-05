@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import {
   ShieldAlert,
-  ShieldCheck,
   CheckCircle2,
   XCircle,
   RotateCcw,
@@ -18,7 +17,6 @@ import {
   ChevronRight,
   Info,
   ArrowLeft,
-  Lock,
 } from "lucide-react";
 import { useQuotations, type QuotationRecord, type QuotationAuditEntry } from "@/context/QuotationsContext";
 import { useRole } from "@/context/RoleContext";
@@ -37,15 +35,22 @@ export default function DiscountApprovalScreen({
   onBack,
 }: DiscountApprovalScreenProps) {
   const { activeUser, currentRole } = useRole();
-  const { approveQuotation, rejectQuotation, returnQuotationForRevision } = useQuotations();
+  const { quotations, approveQuotation, rejectQuotation, returnQuotationForRevision } = useQuotations();
+  const currentQuote = quotations.find((q) => q.id.toLowerCase() === quotation.id.toLowerCase()) || quotation;
+
+  const isApproved =
+    currentQuote.status === "APPROVED" ||
+    currentQuote.approvalStage === "COMPLETED" ||
+    Boolean(currentQuote.auditTrail?.some((a) => a.action?.startsWith("APPROVED")));
+  const isRejected = currentQuote.status === "REJECTED";
 
   const [actionModalType, setActionModalType] = useState<"APPROVE" | "REJECT" | "RETURN" | null>(null);
   const [lastActionEntry, setLastActionEntry] = useState<QuotationAuditEntry | null>(null);
 
   // Determine High Risk / Multi-tier requirement (PRD §5.1: Risk > 50 or Margin < 18%)
-  const isHighRisk = quotation.riskScore > 50;
-  const isMarginEroded = quotation.blendedMargin < 18;
-  const isFinanceRequired = isHighRisk || isMarginEroded || quotation.approvalRequirement === "DUAL_REQUIRED";
+  const isHighRisk = currentQuote.riskScore > 50;
+  const isMarginEroded = currentQuote.blendedMargin < 18;
+  const isFinanceRequired = isHighRisk || isMarginEroded || currentQuote.approvalRequirement === "DUAL_REQUIRED";
 
   // Mathematical formula weights (PRD §5.1)
   const repVolatilityIndex = 0.28;
@@ -53,37 +58,22 @@ export default function DiscountApprovalScreen({
   const marginPenaltyComponent = (25.0 * Math.max(0, (25 - quotation.blendedMargin) / 100) * 10).toFixed(1);
   const repVolatilityComponent = (10.0 * repVolatilityIndex * 10).toFixed(1);
 
-  // Stepper state calculations
-  const isTier1Approved =
-    quotation.approvalStage === "FINANCE" ||
-    quotation.approvalStage === "COMPLETED" ||
-    quotation.status === "APPROVED";
-
-  const isTier2Approved = quotation.approvalStage === "COMPLETED" || quotation.status === "APPROVED";
-
-  const isPendingReview = quotation.status === "IN_REVIEW";
-  const isRejected = quotation.status === "REJECTED";
-  const isReturned = quotation.status === "DRAFT" && quotation.approvalStage === "RETURNED";
 
   // Reviewer action execution
-  const handleConfirmAction = (notes: string) => {
+  const handleConfirmAction = async (notes: string) => {
     try {
       if (actionModalType === "APPROVE") {
-        const result = approveQuotation(quotation.id, activeUser.name, currentRole, notes);
+        const result = await approveQuotation(quotation.id, activeUser.name, currentRole, notes);
         setLastActionEntry(result.auditEntry);
         setActionModalType(null);
-        if (result.isFinal) {
-          toast.success(`Quotation ${quotation.id} fully approved and unlocked for customer review!`);
-        } else {
-          toast.info(`Tier-1 approved. Escalated to Finance Director (Elena Rostova) for Tier-2 sign-off.`);
-        }
+        toast.success(`Quotation ${quotation.id} approved and moved to Approved ledger!`);
       } else if (actionModalType === "REJECT") {
-        const result = rejectQuotation(quotation.id, activeUser.name, currentRole, notes);
+        const result = await rejectQuotation(quotation.id, activeUser.name, currentRole, notes);
         setLastActionEntry(result.auditEntry);
         setActionModalType(null);
         toast.error(`Quotation ${quotation.id} rejected and closed out.`);
       } else if (actionModalType === "RETURN") {
-        const result = returnQuotationForRevision(quotation.id, activeUser.name, currentRole, notes);
+        const result = await returnQuotationForRevision(quotation.id, activeUser.name, currentRole, notes);
         setLastActionEntry(result.auditEntry);
         setActionModalType(null);
         toast.warning(`Quotation ${quotation.id} returned to ${quotation.repName} for revision.`);
@@ -154,8 +144,18 @@ export default function DiscountApprovalScreen({
               >
                 {riskInfo.level} ({quotation.riskScore.toFixed(1)})
               </span>
-              <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-medium">
-                Status: <strong className="text-slate-900">{quotation.status}</strong>
+              <span
+                className={`text-xs px-2.5 py-0.5 rounded-full border font-medium ${
+                  isApproved
+                    ? "bg-emerald-50 border-emerald-300 text-emerald-800 font-bold"
+                    : isRejected
+                    ? "bg-rose-50 border-rose-300 text-rose-800 font-bold"
+                    : "bg-slate-100 border-slate-200 text-slate-700"
+                }`}
+              >
+                Status: <strong className={isApproved ? "text-emerald-900" : isRejected ? "text-rose-900" : "text-slate-900"}>
+                  {isApproved ? "APPROVED" : currentQuote.status}
+                </strong>
               </span>
             </div>
             <p className="text-xs text-[var(--text-muted)] mt-1 flex items-center gap-2">
@@ -189,11 +189,6 @@ export default function DiscountApprovalScreen({
               )}
               {quotation.blendedMargin.toFixed(1)}%
             </span>
-          </div>
-          <div className="w-px h-8 bg-slate-200" />
-          <div>
-            <span className="text-[var(--text-muted)] block text-[10px] font-medium uppercase tracking-wider">Payment Terms</span>
-            <span className="font-semibold text-[var(--text-main)]">{quotation.paymentTerms}</span>
           </div>
         </div>
       </div>
@@ -374,165 +369,6 @@ export default function DiscountApprovalScreen({
         </div>
       </div>
 
-      {/* Approval Steps List (Sequential Stepper) */}
-      <div className="rounded-2xl border border-[var(--border)] bg-white p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-600">
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-[var(--text-main)]">
-                Sequential Governance Approval Chain
-              </h3>
-              <p className="text-[11px] text-[var(--text-muted)]">
-                Dynamic approval steps list dictated by DealOrbit policy engine
-              </p>
-            </div>
-          </div>
-
-          <span className="text-xs px-3 py-1 rounded-full font-mono font-semibold bg-slate-100 border border-slate-200 text-slate-700">
-            {isFinanceRequired ? "Two-Tier Governance (Dual Sign-off)" : "Single-Tier Governance (Sales Manager)"}
-          </span>
-        </div>
-
-        {/* The Stepper Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-          {/* Step 1: Sales Manager */}
-          <div
-            className={`p-4 rounded-xl border transition-all space-y-3 ${
-              isTier1Approved
-                ? "border-emerald-300 bg-emerald-50/50"
-                : quotation.approvalStage === "SALES_MANAGER"
-                ? "border-amber-300 bg-amber-50/50 shadow-xs"
-                : "border-slate-200 bg-slate-50"
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs ${
-                    isTier1Approved
-                      ? "bg-emerald-600 text-white"
-                      : "bg-amber-100 text-amber-800 border border-amber-300"
-                  }`}
-                >
-                  {isTier1Approved ? <CheckCircle2 className="w-4 h-4" /> : "1"}
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-[var(--text-main)]">
-                    Tier-1: Sales Manager Sign-off
-                  </h4>
-                  <p className="text-[11px] text-[var(--text-muted)]">
-                    Assigned: <strong>Morgan Manager</strong> (Sales Management)
-                  </p>
-                </div>
-              </div>
-
-              <span
-                className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
-                  isTier1Approved
-                    ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                    : isRejected
-                    ? "bg-rose-100 text-rose-800 border-rose-300"
-                    : isReturned
-                    ? "bg-amber-100 text-amber-800 border-amber-300"
-                    : "bg-amber-100 text-amber-800 border-amber-300"
-                }`}
-              >
-                {isTier1Approved
-                  ? "APPROVED"
-                  : isRejected
-                  ? "REJECTED"
-                  : isReturned
-                  ? "CHANGES REQUESTED"
-                  : "PENDING REVIEW"}
-              </span>
-            </div>
-
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Required for all quotations with Blended Risk Score &gt; 20 or line item category breaches. Validates commercial rationale and margin health.
-            </p>
-          </div>
-
-          {/* Step 2: Finance Director (CONDITIONAL: ONLY SHOWN WHEN REQUIRED) */}
-          {isFinanceRequired ? (
-            <div
-              className={`p-4 rounded-xl border transition-all space-y-3 ${
-                isTier2Approved
-                  ? "border-emerald-300 bg-emerald-50/50"
-                  : isTier1Approved && quotation.approvalStage === "FINANCE"
-                  ? "border-amber-300 bg-amber-50/50 shadow-xs"
-                  : "border-slate-200 bg-slate-50/70 opacity-80"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs ${
-                      isTier2Approved
-                        ? "bg-emerald-600 text-white"
-                        : isTier1Approved
-                        ? "bg-amber-100 text-amber-800 border border-amber-300"
-                        : "bg-white text-slate-400 border border-slate-200"
-                    }`}
-                  >
-                    {isTier2Approved ? (
-                      <CheckCircle2 className="w-4 h-4" />
-                    ) : !isTier1Approved ? (
-                      <Lock className="w-3.5 h-3.5" />
-                    ) : (
-                      "2"
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-[var(--text-main)] flex items-center gap-1.5">
-                      <span>Tier-2: Finance Director Sign-off</span>
-                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-rose-100 text-rose-700 font-mono font-bold">
-                        REQUIRED
-                      </span>
-                    </h4>
-                    <p className="text-[11px] text-[var(--text-muted)]">
-                      Assigned: <strong>Elena Rostova / Frankie Finance</strong> (Finance & Ops)
-                    </p>
-                  </div>
-                </div>
-
-                <span
-                  className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
-                    isTier2Approved
-                      ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                      : isTier1Approved
-                      ? "bg-amber-100 text-amber-800 border-amber-300"
-                      : "bg-slate-200 text-slate-600 border-slate-300"
-                  }`}
-                >
-                  {isTier2Approved
-                    ? "APPROVED"
-                    : isTier1Approved
-                    ? "AWAITING FINANCE"
-                    : "LOCKED (AWAITING STEP 1)"}
-                </span>
-              </div>
-
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Triggered because Blended Risk Score ({quotation.riskScore.toFixed(1)}) &gt; 50 or Blended Gross Margin ({quotation.blendedMargin.toFixed(1)}%) &lt; 18%. Vets enterprise cash-flow and corporate margin leakage.
-              </p>
-            </div>
-          ) : (
-            <div className="p-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 flex flex-col justify-center space-y-1.5 text-xs text-slate-600">
-              <div className="flex items-center gap-2 text-emerald-700 font-semibold">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>Finance Tier-2 Escalation Not Required</span>
-              </div>
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                Because this quotation carries a Risk Score ≤ 50 and Blended Margin ≥ 18%, corporate policy bypasses Tier-2 finance escalation. Single-tier Sales Manager sign-off is sufficient.
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Reviewer Action Bar (Approve / Reject / Return for Revision) */}
       <div className="rounded-2xl border border-[var(--border)] bg-white p-5 shadow-xs space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -550,52 +386,55 @@ export default function DiscountApprovalScreen({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Return for Revision */}
-            <button
-              type="button"
-              onClick={() => setActionModalType("RETURN")}
-              disabled={quotation.status === "APPROVED" || quotation.status === "REJECTED"}
-              className="px-4 py-2 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 font-semibold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <RotateCcw className="w-4 h-4 text-amber-700" />
-              <span>Return for Revision</span>
-            </button>
+          {isApproved ? (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold shadow-2xs">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>Quotation Approved · Governance Complete</span>
+            </div>
+          ) : isRejected ? (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-50 border border-rose-300 text-rose-800 text-xs font-bold shadow-2xs">
+              <XCircle className="w-4 h-4 text-rose-600" />
+              <span>Quotation Rejected</span>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Return for Revision */}
+              <button
+                type="button"
+                onClick={() => setActionModalType("RETURN")}
+                className="px-4 py-2 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 font-semibold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <RotateCcw className="w-4 h-4 text-amber-700" />
+                <span>Return for Revision</span>
+              </button>
 
-            {/* Reject */}
-            <button
-              type="button"
-              onClick={() => setActionModalType("REJECT")}
-              disabled={quotation.status === "APPROVED" || quotation.status === "REJECTED"}
-              className="px-4 py-2 rounded-xl border border-rose-300 bg-rose-50 text-rose-900 hover:bg-rose-100 font-semibold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <XCircle className="w-4 h-4 text-rose-700" />
-              <span>Reject Quotation</span>
-            </button>
+              {/* Reject */}
+              <button
+                type="button"
+                onClick={() => setActionModalType("REJECT")}
+                className="px-4 py-2 rounded-xl border border-rose-300 bg-rose-50 text-rose-900 hover:bg-rose-100 font-semibold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <XCircle className="w-4 h-4 text-rose-700" />
+                <span>Reject Quotation</span>
+              </button>
 
-            {/* Approve */}
-            <button
-              type="button"
-              onClick={() => setActionModalType("APPROVE")}
-              disabled={quotation.status === "APPROVED" || quotation.status === "REJECTED"}
-              className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>
-                {quotation.approvalStage === "FINANCE"
-                  ? "Approve Final (Finance Sign-off)"
-                  : isFinanceRequired
-                  ? "Approve Tier-1 (Pass to Finance)"
-                  : "Approve Quotation"}
-              </span>
-            </button>
-          </div>
+              {/* Approve */}
+              <button
+                type="button"
+                onClick={() => setActionModalType("APPROVE")}
+                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Approve Quotation</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Confirmation Screen & Full Audit Trail Ledger */}
       <ApprovalConfirmationCard
-        quotation={quotation}
+        quotation={currentQuote}
         lastActionEntry={lastActionEntry}
         onDismissConfirmation={() => setLastActionEntry(null)}
       />
@@ -605,10 +444,10 @@ export default function DiscountApprovalScreen({
         isOpen={actionModalType !== null}
         onClose={() => setActionModalType(null)}
         actionType={actionModalType}
-        quotation={quotation}
+        quotation={currentQuote}
         reviewerName={activeUser.name}
         reviewerRole={currentRole}
-        isDualRequired={isFinanceRequired}
+        isDualRequired={false}
         onConfirm={handleConfirmAction}
       />
     </div>

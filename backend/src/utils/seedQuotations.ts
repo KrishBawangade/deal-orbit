@@ -279,6 +279,46 @@ export const seedQuotationsData = async (): Promise<void> => {
             },
           ]
         : [],
+      auditLogs: [
+        {
+          actorId: salesRep.id,
+          actorName: salesRep.name,
+          actorRole: 'SALES_REP',
+          action: 'SUBMITTED',
+          previousState: 'DRAFT',
+          newState: 'IN_REVIEW',
+          reason: 'Quotation configured with 18% discount on on-site deployment to secure enterprise migration. Submitted for managerial sign-off.',
+          metadataJson: {
+            actorName: salesRep.name,
+            actorRole: 'SALES_REP',
+            riskScore: 38.5,
+            blendedMargin: 18.4,
+            stage: 'SALES_MANAGER',
+          },
+          createdAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
+        },
+        ...(salesManager
+          ? [
+              {
+                actorId: salesManager.id,
+                actorName: salesManager.name,
+                actorRole: 'SALES_MANAGER',
+                action: 'APPROVED_FINAL',
+                previousState: 'IN_REVIEW',
+                newState: 'CUSTOMER_REVIEW',
+                reason: 'Strategic Gold Tier renewal exception approved for hardware volume.',
+                metadataJson: {
+                  actorName: salesManager.name,
+                  actorRole: 'SALES_MANAGER',
+                  riskScore: 38.5,
+                  blendedMargin: 18.4,
+                  stage: 'COMPLETED',
+                },
+                createdAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000),
+              },
+            ]
+          : []),
+      ],
       negotiationThreads: [
         {
           authorRole: 'CUSTOMER',
@@ -369,6 +409,46 @@ export const seedQuotationsData = async (): Promise<void> => {
             },
           ]
         : [],
+      auditLogs: [
+        {
+          actorId: salesRep.id,
+          actorName: salesRep.name,
+          actorRole: 'SALES_REP',
+          action: 'SUBMITTED',
+          previousState: 'DRAFT',
+          newState: 'IN_REVIEW',
+          reason: 'Initial quotation submitted for enterprise software security suite with 7.9% aggregate discount.',
+          metadataJson: {
+            actorName: salesRep.name,
+            actorRole: 'SALES_REP',
+            riskScore: 12.0,
+            blendedMargin: 43.6,
+            stage: 'SALES_MANAGER',
+          },
+          createdAt: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000),
+        },
+        ...(salesManager
+          ? [
+              {
+                actorId: salesManager.id,
+                actorName: salesManager.name,
+                actorRole: 'SALES_MANAGER',
+                action: 'APPROVED_FINAL',
+                previousState: 'IN_REVIEW',
+                newState: 'APPROVED',
+                reason: 'High margin multi-year software suite compliant with enterprise pricing guidelines. Blended margin 43.6% exceeds policy threshold.',
+                metadataJson: {
+                  actorName: salesManager.name,
+                  actorRole: 'SALES_MANAGER',
+                  riskScore: 12.0,
+                  blendedMargin: 43.6,
+                  stage: 'COMPLETED',
+                },
+                createdAt: new Date(now.getTime() - 12 * 60 * 60 * 1000),
+              },
+            ]
+          : []),
+      ],
       negotiationThreads: [],
     },
 
@@ -444,6 +524,25 @@ export const seedQuotationsData = async (): Promise<void> => {
             ]
           : []),
       ],
+      auditLogs: [
+        {
+          actorId: salesRep.id,
+          actorName: salesRep.name,
+          actorRole: 'SALES_REP',
+          action: 'SUBMITTED',
+          previousState: 'DRAFT',
+          newState: 'IN_REVIEW',
+          reason: 'High-volume 50-laptop enterprise bid submitted for two-tier governance approval.',
+          metadataJson: {
+            actorName: salesRep.name,
+            actorRole: 'SALES_REP',
+            riskScore: 78.4,
+            blendedMargin: 3.2,
+            stage: 'SALES_MANAGER',
+          },
+          createdAt: new Date(now.getTime() - 4 * 60 * 60 * 1000),
+        },
+      ],
       negotiationThreads: [],
     },
 
@@ -496,6 +595,7 @@ export const seedQuotationsData = async (): Promise<void> => {
         },
       ],
       approvalRequests: [],
+      auditLogs: [],
       negotiationThreads: [],
     },
   ];
@@ -514,6 +614,7 @@ export const seedQuotationsData = async (): Promise<void> => {
       await prisma.quotationLine.deleteMany({ where: { quotationId: existing.id } });
       await prisma.approvalRequest.deleteMany({ where: { quotationId: existing.id } });
       await prisma.customerNegotiationThread.deleteMany({ where: { quotationId: existing.id } });
+      await prisma.auditLog.deleteMany({ where: { quotationId: existing.id } });
 
       await prisma.quotation.update({
         where: { id: existing.id },
@@ -573,6 +674,22 @@ export const seedQuotationsData = async (): Promise<void> => {
         });
       }
 
+      // Insert audit logs
+      for (const log of q.auditLogs) {
+        await prisma.auditLog.create({
+          data: {
+            quotationId: existing.id,
+            actorId: log.actorId,
+            action: log.action,
+            previousState: log.previousState,
+            newState: log.newState,
+            reason: log.reason,
+            metadataJson: log.metadataJson,
+            createdAt: log.createdAt,
+          },
+        });
+      }
+
       // Insert threads
       for (const thread of q.negotiationThreads) {
         await prisma.customerNegotiationThread.create({
@@ -586,7 +703,7 @@ export const seedQuotationsData = async (): Promise<void> => {
         });
       }
 
-      console.log(`   ✓ Updated Quotation: ${q.quoteNumber} (${cust.name}, Status: ${q.status})`);
+      console.log(`   ✓ Updated Quotation: ${q.quoteNumber} (${cust.name}, Status: ${q.status}, Audit Logs: ${q.auditLogs.length})`);
     } else {
       const createdQuote = await prisma.quotation.create({
         data: {
@@ -646,7 +763,23 @@ export const seedQuotationsData = async (): Promise<void> => {
         },
       });
 
-      console.log(`   ✓ Created Quotation: ${createdQuote.quoteNumber} (${cust.name}, Status: ${createdQuote.status})`);
+      // Insert audit logs
+      for (const log of q.auditLogs) {
+        await prisma.auditLog.create({
+          data: {
+            quotationId: createdQuote.id,
+            actorId: log.actorId,
+            action: log.action,
+            previousState: log.previousState,
+            newState: log.newState,
+            reason: log.reason,
+            metadataJson: log.metadataJson,
+            createdAt: log.createdAt,
+          },
+        });
+      }
+
+      console.log(`   ✓ Created Quotation: ${createdQuote.quoteNumber} (${cust.name}, Status: ${createdQuote.status}, Audit Logs: ${q.auditLogs.length})`);
     }
   }
 

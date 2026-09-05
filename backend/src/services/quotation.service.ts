@@ -5,6 +5,61 @@ import { governanceService, DEFAULT_CUSTOMER_TIER_CEILINGS } from './governance.
 import { AppError } from '../utils/appError';
 import { IAuthUser } from '../types';
 
+function formatAuditTimestamp(date: Date): string {
+  const now = new Date();
+  const isSameDay =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const isYesterday =
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear();
+
+  const timeStr = date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+
+  if (isSameDay) {
+    return `Today at ${timeStr}`;
+  } else if (isYesterday) {
+    return `Yesterday at ${timeStr}`;
+  } else {
+    const dateStr = date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
+    return `${dateStr} at ${timeStr}`;
+  }
+}
+
+function mapAuditLogToEntry(log: any) {
+  const meta = (log.metadataJson as any) || {};
+  const timestampStr =
+    typeof meta.timestamp === 'string' && !meta.timestamp.includes('T')
+      ? meta.timestamp
+      : formatAuditTimestamp(new Date(log.createdAt));
+
+  return {
+    id: log.id,
+    action: log.action,
+    actorName: log.actor?.name || meta.actorName || 'Morgan Manager',
+    actorRole: log.actor?.role || meta.actorRole || 'SALES_MANAGER',
+    timestamp: timestampStr,
+    notes: log.reason || '',
+    metadata: {
+      riskScore: meta.riskScore,
+      blendedMargin: meta.blendedMargin,
+      stage: meta.stage,
+      ...meta,
+    },
+  };
+}
+
 export class QuotationService {
   /**
    * List quotations with filtering, pagination, and calculated telemetry
@@ -19,6 +74,34 @@ export class QuotationService {
     }
 
     const { quotations, total } = await quotationRepository.findAllWithFilters(queryFilter);
+
+    // Fetch and index audit trail records for all retrieved quotations
+    const quoteIds = quotations.map((q) => q.id);
+    const auditLogs =
+      quoteIds.length > 0
+        ? await prisma.auditLog.findMany({
+            where: { quotationId: { in: quoteIds } },
+            include: {
+              actor: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  role: true,
+                },
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+          })
+        : [];
+
+    const auditLogsByQuoteId = new Map<string, any[]>();
+    for (const log of auditLogs) {
+      if (!log.quotationId) continue;
+      const list = auditLogsByQuoteId.get(log.quotationId) || [];
+      list.push(log);
+      auditLogsByQuoteId.set(log.quotationId, list);
+    }
 
     const formatted = quotations.map((q) => {
       const subtotalNum = Number(q.subtotalAmount);
@@ -63,6 +146,9 @@ export class QuotationService {
       const tier = (q.customer?.tier as CustomerTier) || 'BRONZE';
       const tierCeiling = DEFAULT_CUSTOMER_TIER_CEILINGS[tier] || 10.0;
 
+      const qAuditLogs = auditLogsByQuoteId.get(q.id) || [];
+      const auditTrail = qAuditLogs.map(mapAuditLogToEntry);
+
       return {
         id: q.quoteNumber, // Frontend displays quoteNumber as Primary ID
         internalId: q.id,
@@ -92,6 +178,7 @@ export class QuotationService {
         paymentTerms: q.paymentTerms,
         portalToken: q.portalToken,
         expiresAt: q.expiresAt?.toISOString(),
+        auditTrail,
         lines: (q.lines || []).map((l: any) => ({
           id: l.id,
           productId: l.productId,
@@ -182,6 +269,24 @@ export class QuotationService {
       approvalStage = 'REJECTED';
     }
 
+    // Fetch audit logs for this specific quotation
+    const auditLogs = await prisma.auditLog.findMany({
+      where: { quotationId: quote.id },
+      include: {
+        actor: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const auditTrail = auditLogs.map(mapAuditLogToEntry);
+
     return {
       id: quote.quoteNumber,
       internalId: quote.id,
@@ -212,6 +317,7 @@ export class QuotationService {
       portalToken: quote.portalToken,
       expiresAt: quote.expiresAt?.toISOString(),
       approvalRequests: quote.approvalRequests || [],
+      auditTrail,
       negotiationMessages: (quote.negotiationThreads || []).map((t: any) => ({
         id: t.id,
         quotationId: quote.quoteNumber,

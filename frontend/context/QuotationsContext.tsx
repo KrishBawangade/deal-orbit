@@ -398,58 +398,107 @@ const INITIAL_QUOTATIONS: QuotationRecord[] = [
     customerId: "cust-002",
     tier: "ENTERPRISE",
     tierCeiling: 20,
-    lineItemsCount: 4,
-    subtotal: "₹8,90,000",
-    subtotalAmount: 890000,
-    discountAmount: 71200,
+    lineItemsCount: 3,
+    subtotal: "₹7,90,000",
+    subtotalAmount: 790000,
+    discountAmount: 62500,
     orderDiscountPercent: 0,
-    taxAmount: 131000,
-    total: "₹9,50,000",
-    totalAmount: 950000,
-    blendedMargin: 24.8,
+    taxAmount: 130950,
+    total: "₹8,58,450",
+    totalAmount: 858450,
+    blendedMargin: 43.6,
     marginStatus: "HIGH",
-    riskScore: 14.0,
-    status: "DRAFT",
-    approvalRequirement: "NONE",
-    repName: "Sam Seller",
-    updatedAt: "1 hour ago",
-    paymentTerms: "Net 45",
+    riskScore: 12.0,
+    status: "APPROVED",
+    approvalRequirement: "MANAGER_REQUIRED",
+    approvalStage: "COMPLETED",
+    repName: "Sarah Jenkins",
+    updatedAt: "12 hours ago",
+    paymentTerms: "Net 60",
+    portalToken: "stark-token",
+    expiresAt: "2026-10-06",
+    auditTrail: [
+      {
+        id: "audit-044-02",
+        action: "APPROVED_FINAL",
+        actorName: "Morgan Manager",
+        actorRole: "SALES_MANAGER",
+        timestamp: "Yesterday at 15:30",
+        notes: "High margin multi-year software suite compliant with enterprise pricing guidelines. Blended margin 43.6% exceeds policy threshold.",
+        metadata: {
+          riskScore: 12.0,
+          blendedMargin: 43.6,
+          stage: "COMPLETED",
+        },
+      },
+      {
+        id: "audit-044-01",
+        action: "SUBMITTED",
+        actorName: "Sarah Jenkins",
+        actorRole: "SALES_REP",
+        timestamp: "Yesterday at 10:15",
+        notes: "Initial quotation submitted for enterprise software security suite with 7.9% aggregate discount.",
+        metadata: {
+          riskScore: 12.0,
+          blendedMargin: 43.6,
+          stage: "SALES_MANAGER",
+        },
+      },
+    ],
     lines: [
       {
         id: "line-03",
-        productId: "prod-hw-02",
-        sku: "HW-DOCK-4K",
-        name: "UltraHD 4K Thunderbolt Docking Station 120W",
-        category: "HARDWARE",
-        quantity: 20,
-        unitPrice: 18500,
-        unitCost: 12000,
-        discountPercent: 10.0,
-        effectiveCeiling: 15.0,
+        productId: "prod-sw-01",
+        sku: "SW-SEC-01",
+        name: "Cloud Security Suite & Zero Trust Gateway",
+        category: "SOFTWARE",
+        quantity: 10,
+        unitPrice: 45000,
+        unitCost: 22000,
+        discountPercent: 8.0,
+        effectiveCeiling: 20.0,
         isViolation: false,
         violationPoints: 0,
-        netLineTotal: 333000,
-        lineMarginPercent: 27.9,
+        netLineTotal: 414000,
+        lineMarginPercent: 46.8,
         isRecurring: false,
         billingFrequency: "ONE_TIME",
       },
       {
         id: "line-04",
-        productId: "prod-sub-01",
-        sku: "SUB-PLATFORM-ENT",
-        name: "DealOrbit Cloud Platform Enterprise License",
+        productId: "prod-sw-02",
+        sku: "SW-DB-02",
+        name: "Enterprise Database Managed Cluster (HA)",
         category: "SOFTWARE",
-        quantity: 12,
-        unitPrice: 25000,
-        unitCost: 5000,
-        discountPercent: 15.0,
+        quantity: 2,
+        unitPrice: 95000,
+        unitCost: 50000,
+        discountPercent: 10.0,
         effectiveCeiling: 20.0,
         isViolation: false,
         violationPoints: 0,
-        netLineTotal: 255000,
-        lineMarginPercent: 76.5,
-        isRecurring: true,
-        billingFrequency: "MONTHLY",
+        netLineTotal: 171000,
+        lineMarginPercent: 41.5,
+        isRecurring: false,
+        billingFrequency: "ONE_TIME",
+      },
+      {
+        id: "line-05",
+        productId: "prod-srv-01",
+        sku: "SRV-TAM-01",
+        name: "24/7 Dedicated Technical Account Manager",
+        category: "SERVICES",
+        quantity: 1,
+        unitPrice: 150000,
+        unitCost: 90000,
+        discountPercent: 5.0,
+        effectiveCeiling: 10.0,
+        isViolation: false,
+        violationPoints: 0,
+        netLineTotal: 142500,
+        lineMarginPercent: 36.8,
+        isRecurring: false,
+        billingFrequency: "ONE_TIME",
       },
     ],
   },
@@ -538,35 +587,35 @@ interface QuotationsContextType {
     reviewerName: string,
     reviewerRole: Role,
     notes?: string
-  ) => {
+  ) => Promise<{
     nextStatus: QuoteStatus;
     nextStage: "SALES_MANAGER" | "FINANCE" | "COMPLETED" | "REJECTED" | "RETURNED";
     isFinal: boolean;
     auditEntry: QuotationAuditEntry;
-  };
+  }>;
   rejectQuotation: (
     quoteId: string,
     reviewerName: string,
     reviewerRole: Role,
     reason: string
-  ) => {
+  ) => Promise<{
     nextStatus: QuoteStatus;
     auditEntry: QuotationAuditEntry;
-  };
+  }>;
   returnQuotationForRevision: (
     quoteId: string,
     reviewerName: string,
     reviewerRole: Role,
     feedback: string
-  ) => {
+  ) => Promise<{
     nextStatus: QuoteStatus;
     auditEntry: QuotationAuditEntry;
-  };
+  }>;
 }
 
 const QuotationsContext = createContext<QuotationsContextType | null>(null);
 
-const STORAGE_KEY = "dealorbit_quotations_data_v3";
+const STORAGE_KEY = "dealorbit_quotations_data_v4";
 
 export function QuotationsProvider({ children }: { children: React.ReactNode }) {
   const [quotations, setQuotations] = useState<QuotationRecord[]>(INITIAL_QUOTATIONS);
@@ -608,6 +657,7 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
         const serverQuotes: QuotationRecord[] = data.data.quotations.map((q: any) => ({
           ...q,
           approvalStage: q.approvalStage || (q.status === "IN_REVIEW" ? "SALES_MANAGER" : undefined),
+          auditTrail: q.auditTrail || [],
         }));
         setQuotations(serverQuotes);
         if (typeof window !== "undefined") {
@@ -917,7 +967,7 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
   );
 
   const approveQuotation = useCallback(
-    (
+    async (
       quoteId: string,
       reviewerName: string,
       reviewerRole: Role,
@@ -933,28 +983,12 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
 
       const currentStage = currentQuote.approvalStage || "SALES_MANAGER";
 
-      let nextStatus: QuoteStatus = currentQuote.status;
-      let nextStage: "SALES_MANAGER" | "FINANCE" | "COMPLETED" | "REJECTED" | "RETURNED" = currentStage;
-      let actionType: ApprovalActionType = "APPROVED_FINAL";
-      let isFinal = false;
+      const nextStatus: QuoteStatus = "APPROVED";
+      const nextStage = "COMPLETED" as const;
+      const actionType: ApprovalActionType = "APPROVED_FINAL";
+      const isFinal = true;
 
-      // If dual approval required and Sales Manager is acting, advance to Finance
-      if (isDualRequired && currentStage === "SALES_MANAGER" && reviewerRole !== "FINANCE_OPS") {
-        nextStage = "FINANCE";
-        nextStatus = "IN_REVIEW";
-        actionType = "APPROVED_TIER_1";
-        isFinal = false;
-      } else {
-        // Either single manager approval required, or Finance is approving, or Admin override
-        nextStage = "COMPLETED";
-        nextStatus = "APPROVED";
-        actionType = "APPROVED_FINAL";
-        isFinal = true;
-      }
-
-      const defaultNotes = isFinal
-        ? "Commercial and discount terms approved for restricted customer publishing."
-        : "Tier-1 managerial sign-off completed. Escalated to Finance Director for high-risk / margin leakage review.";
+      const defaultNotes = "Commercial and discount terms approved by governance.";
 
       const auditEntry: QuotationAuditEntry = {
         id: `audit-${Date.now()}`,
@@ -985,13 +1019,52 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
         })
       );
 
+      // Persist to backend API (API.md §8.2)
+      try {
+        const token =
+          typeof window !== "undefined"
+            ? localStorage.getItem("dealorbit_token") ||
+              document.cookie
+                .split("; ")
+                .find((row) => row.startsWith("dealorbit_token="))
+                ?.split("=")[1]
+            : undefined;
+
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+
+        const res = await fetch(
+          `${siteConfig.apiUrl}/api/v1/approvals/${encodeURIComponent(quoteId)}/decision`,
+          {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              decision: "APPROVED",
+              reason: notes.trim() || defaultNotes,
+              reviewerName,
+              reviewerRole,
+            }),
+          }
+        );
+
+        if (!res.ok) {
+          console.warn(`Backend approval API responded with HTTP ${res.status}`);
+        }
+      } catch (apiErr) {
+        console.warn("Backend approval API sync notice:", apiErr);
+      }
+
       return { nextStatus, nextStage, isFinal, auditEntry };
     },
     [quotations]
   );
 
   const rejectQuotation = useCallback(
-    (
+    async (
       quoteId: string,
       reviewerName: string,
       reviewerRole: Role,
@@ -1023,13 +1096,48 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
         })
       );
 
+      // Persist to backend API (API.md §8.2)
+      try {
+        const token =
+          typeof window !== "undefined"
+            ? localStorage.getItem("dealorbit_token") ||
+              document.cookie
+                .split("; ")
+                .find((row) => row.startsWith("dealorbit_token="))
+                ?.split("=")[1]
+            : undefined;
+
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+
+        await fetch(
+          `${siteConfig.apiUrl}/api/v1/approvals/${encodeURIComponent(quoteId)}/decision`,
+          {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              decision: "REJECTED",
+              reason: reason.trim() || "Discount configuration rejected by governance board.",
+              reviewerName,
+              reviewerRole,
+            }),
+          }
+        );
+      } catch (apiErr) {
+        console.warn("Backend rejection API sync notice:", apiErr);
+      }
+
       return { nextStatus: "REJECTED" as QuoteStatus, auditEntry };
     },
     [quotations]
   );
 
   const returnQuotationForRevision = useCallback(
-    (
+    async (
       quoteId: string,
       reviewerName: string,
       reviewerRole: Role,
@@ -1061,6 +1169,41 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
           };
         })
       );
+
+      // Persist to backend API (API.md §8.2)
+      try {
+        const token =
+          typeof window !== "undefined"
+            ? localStorage.getItem("dealorbit_token") ||
+              document.cookie
+                .split("; ")
+                .find((row) => row.startsWith("dealorbit_token="))
+                ?.split("=")[1]
+            : undefined;
+
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+
+        await fetch(
+          `${siteConfig.apiUrl}/api/v1/approvals/${encodeURIComponent(quoteId)}/decision`,
+          {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              decision: "CHANGES_REQUESTED",
+              reason: feedback.trim() || "Returned for revision.",
+              reviewerName,
+              reviewerRole,
+            }),
+          }
+        );
+      } catch (apiErr) {
+        console.warn("Backend revision return API sync notice:", apiErr);
+      }
 
       return { nextStatus: "DRAFT" as QuoteStatus, auditEntry };
     },

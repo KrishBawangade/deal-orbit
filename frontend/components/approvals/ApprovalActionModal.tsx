@@ -72,7 +72,7 @@ export default function ApprovalActionModal({
 
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-bold text-slate-900">
-              {actionType === "APPROVE" && (isFinanceStepNext ? "Sign Off Tier-1 (Sales Manager)" : "Confirm Final Approval")}
+              {actionType === "APPROVE" && "Confirm Quotation Approval"}
               {actionType === "REJECT" && "Reject Quotation"}
               {actionType === "RETURN" && "Return Quotation for Revision"}
             </h3>
@@ -87,16 +87,10 @@ export default function ApprovalActionModal({
           <div className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/70 space-y-1.5 text-xs">
             <div className="flex items-center gap-2 font-bold text-emerald-800">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>
-                {isFinanceStepNext
-                  ? "Tier-1 Governance Sign-off"
-                  : "Final Commercial Sign-off"}
-              </span>
+              <span>Commercial & Discount Sign-off</span>
             </div>
             <p className="text-emerald-900/80 leading-relaxed">
-              {isFinanceStepNext
-                ? `Because the Blended Risk Score is ${quotation.riskScore.toFixed(1)} (High Risk > 50) and margin is ${quotation.blendedMargin.toFixed(1)}%, this approval will advance the quotation to Elena Rostova (Finance Director) for Tier-2 sign-off.`
-                : `This approval finalizes discount governance. The quotation will be unlocked for publishing to the restricted customer negotiation portal.`}
+              This approval finalizes discount governance. The quotation will be committed to the Approved ledger and unlocked for publishing to the customer portal.
             </p>
           </div>
         )}
