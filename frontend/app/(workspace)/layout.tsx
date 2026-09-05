@@ -3,6 +3,7 @@
 import React from "react";
 import Navbar from "@/components/Navbar";
 import { RoleProvider, useRole } from "@/context/RoleContext";
+import { QuotationsProvider } from "@/context/QuotationsContext";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -45,7 +46,9 @@ export default function WorkspaceLayout({
 }) {
   return (
     <RoleProvider>
-      <WorkspaceContent>{children}</WorkspaceContent>
+      <QuotationsProvider>
+        <WorkspaceContent>{children}</WorkspaceContent>
+      </QuotationsProvider>
     </RoleProvider>
   );
 }

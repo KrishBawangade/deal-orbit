@@ -43,7 +43,7 @@ export default function SalesWorkspaceDashboard() {
           {/* Quick Action Buttons */}
           <div className="flex flex-wrap items-center gap-3">
             <Link
-              href="/quotations"
+              href="/quotations/new"
               className="btn-primary text-xs py-2 px-4 flex items-center gap-2 shadow-sm"
             >
               <Plus className="w-4 h-4" />

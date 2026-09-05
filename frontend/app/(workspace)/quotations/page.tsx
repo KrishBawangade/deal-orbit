@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRole } from "@/context/RoleContext";
+import { useQuotations, QuotationRecord } from "@/context/QuotationsContext";
 import {
   FileText,
   Plus,
@@ -17,76 +18,16 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-interface QuoteSummary {
-  id: string;
-  customerName: string;
-  tier: "BRONZE" | "SILVER" | "GOLD" | "ENTERPRISE";
-  tierCeiling: number;
-  lineItemsCount: number;
-  subtotal: string;
-  total: string;
-  blendedMargin: number;
-  marginStatus: "HIGH" | "MEDIUM" | "DANGER";
-  riskScore: number;
-  status: "DRAFT" | "IN_REVIEW" | "APPROVED" | "CUSTOMER_REVIEW";
-  repName: string;
-  updatedAt: string;
-}
-
-const SAMPLE_QUOTATIONS: QuoteSummary[] = [
-  {
-    id: "QT-2026-0043",
-    customerName: "Acme Corp",
-    tier: "GOLD",
-    tierCeiling: 15,
-    lineItemsCount: 2,
-    subtotal: "₹18,20,000",
-    total: "₹18,81,392",
-    blendedMargin: 18.4,
-    marginStatus: "MEDIUM",
-    riskScore: 38.5,
-    status: "IN_REVIEW",
-    repName: "Sam Seller",
-    updatedAt: "10 mins ago",
-  },
-  {
-    id: "QT-2026-0044",
-    customerName: "Stark Enterprises",
-    tier: "ENTERPRISE",
-    tierCeiling: 20,
-    lineItemsCount: 4,
-    subtotal: "₹8,90,000",
-    total: "₹9,50,000",
-    blendedMargin: 24.8,
-    marginStatus: "HIGH",
-    riskScore: 14.0,
-    status: "DRAFT",
-    repName: "Sam Seller",
-    updatedAt: "1 hour ago",
-  },
-  {
-    id: "QT-2026-0045",
-    customerName: "Wayne Logistics",
-    tier: "SILVER",
-    tierCeiling: 10,
-    lineItemsCount: 1,
-    subtotal: "₹4,10,000",
-    total: "₹4,48,600",
-    blendedMargin: 22.1,
-    marginStatus: "HIGH",
-    riskScore: 12.0,
-    status: "DRAFT",
-    repName: "Sam Seller",
-    updatedAt: "3 hours ago",
-  },
-];
-
 export default function QuotationsPage() {
   const { activeUser } = useRole();
+  const { quotations } = useQuotations();
   const [filterTab, setFilterTab] = useState<"ALL" | "DRAFT" | "IN_REVIEW">("ALL");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredQuotes = SAMPLE_QUOTATIONS.filter((q) => {
+  const draftCount = quotations.filter((q) => q.status === "DRAFT").length;
+  const inReviewCount = quotations.filter((q) => q.status === "IN_REVIEW").length;
+
+  const filteredQuotes = quotations.filter((q) => {
     if (filterTab !== "ALL" && q.status !== filterTab) return false;
     if (searchQuery.trim()) {
       const qLower = searchQuery.toLowerCase();
@@ -112,13 +53,13 @@ export default function QuotationsPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button
-            type="button"
+          <Link
+            href="/quotations/new"
             className="btn-primary text-xs py-2 px-4 flex items-center gap-2 shadow-sm cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>New Quotation</span>
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -135,7 +76,7 @@ export default function QuotationsPage() {
                 : "text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--card)]"
             }`}
           >
-            All Proposals ({SAMPLE_QUOTATIONS.length})
+            All Proposals ({quotations.length})
           </button>
 
           <button
@@ -147,7 +88,7 @@ export default function QuotationsPage() {
                 : "text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--card)]"
             }`}
           >
-            Drafts (2)
+            Drafts ({draftCount})
           </button>
 
           <button
@@ -159,7 +100,7 @@ export default function QuotationsPage() {
                 : "text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--card)]"
             }`}
           >
-            Under Review (1)
+            Under Review ({inReviewCount})
           </button>
         </div>
 
@@ -280,7 +221,7 @@ export default function QuotationsPage() {
                   <td className="px-4 py-3.5 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Link
-                        href={`/quotations?id=${q.id}`}
+                        href={`/quotations/${q.id}`}
                         className="btn-outline text-[11px] py-1 px-2.5 flex items-center gap-1 font-medium"
                       >
                         <span>Open</span>
