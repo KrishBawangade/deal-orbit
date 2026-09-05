@@ -5,7 +5,7 @@ import { fontHeading, fontSans } from "@/config/fonts";
 import { Toaster } from "@/components/Toaster";
 
 export const metadata: Metadata = {
-  title: `${siteConfig.name} | Starter Template`,
+  title: `${siteConfig.name} | Intelligent Sales Operations Platform`,
   description: siteConfig.description,
 };
 

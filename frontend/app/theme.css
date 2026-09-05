@@ -1,6 +1,6 @@
 /**
  * ==============================================================================
- * SINGLE SOURCE OF TRUTH DESIGN TOKENS
+ * SINGLE SOURCE OF TRUTH DESIGN TOKENS — DEALORBIT (COSMIC ORBIT)
  * ==============================================================================
  * Edit any variable in this file to update the entire application's theme,
  * typography, colors, borders, and geometry instantly.
@@ -8,37 +8,83 @@
 
 :root {
   /* --------------------------------------------------------------------------
-   * Brand & Accent Colors
+   * 1. Brand & Accent Colors (Cosmic Orbit)
    * -------------------------------------------------------------------------- */
-  --primary: #6366f1;             /* Vibrant Indigo (Main Brand) */
-  --primary-hover: #4f46e5;       /* Hover state */
-  --primary-active: #4338ca;      /* Active / Pressed state */
+  --primary: #4f46e5;             /* Electric Indigo (Main Brand) */
+  --primary-hover: #4338ca;       /* Hover state */
+  --primary-active: #3730a3;      /* Active / Pressed state */
   --primary-foreground: #ffffff;  /* High-contrast text on primary */
-  --primary-subtle: #eef2ff;      /* 10% tint for badges & active states */
+  --primary-subtle: #eef2ff;      /* Tint for badges & active states */
   --primary-subtle-border: #c7d2fe;
 
-  --accent: #06b6d4;              /* Cyan / Teal Accent */
+  --accent: #06b6d4;              /* Quantum Cyan (Telemetry & Live Simulation) */
   --accent-hover: #0891b2;
   --accent-foreground: #ffffff;
   --accent-subtle: #ecfeff;
+  --accent-subtle-border: #a5f3fc;
 
-  --destructive: #ef4444;         /* Error & danger states */
+  --destructive: #ef4444;         /* Error, violations, danger states */
   --destructive-foreground: #ffffff;
+  --destructive-subtle: #fef2f2;
+  --destructive-subtle-border: #fecaca;
+
   --success: #10b981;             /* Success alerts & connected states */
-  --warning: #f59e0b;             /* Warnings & pending states */
+  --success-subtle: #ecfdf5;
+  --success-subtle-border: #a7f3d0;
+
+  --warning: #f59e0b;             /* Warnings, pending review states */
+  --warning-subtle: #fffbeb;
+  --warning-subtle-border: #fde68a;
 
   /* --------------------------------------------------------------------------
-   * Canvas, Surfaces & Borders
+   * 2. Deal Operations & Telemetry Semantics
    * -------------------------------------------------------------------------- */
-  --background: #f8fafc;          /* Clean canvas background */
+  /* Gross Margin Status (>20% Healthy, 15-20% Warning, <15% Critical) */
+  --margin-high: #10b981;
+  --margin-high-subtle: #ecfdf5;
+  --margin-mid: #f59e0b;
+  --margin-mid-subtle: #fffbeb;
+  --margin-low: #ef4444;
+  --margin-low-subtle: #fef2f2;
+
+  /* Blended Risk Score (<20 Auto, 20-50 Manager Req, >50 Finance Req) */
+  --risk-low: #10b981;
+  --risk-low-subtle: #ecfdf5;
+  --risk-med: #f59e0b;
+  --risk-med-subtle: #fffbeb;
+  --risk-high: #ef4444;
+  --risk-high-subtle: #fef2f2;
+
+  /* Customer Tiering */
+  --tier-gold: #d97706;
+  --tier-gold-subtle: #fef3c7;
+  --tier-gold-border: #fde68a;
+
+  /* Role Badges (Sales Rep, Sales Manager, Finance/Ops, System Admin) */
+  --role-rep: #6366f1;
+  --role-rep-subtle: #eef2ff;
+  --role-manager: #d97706;
+  --role-manager-subtle: #fef3c7;
+  --role-finance: #0284c7;
+  --role-finance-subtle: #f0f9ff;
+  --role-admin: #7c3aed;
+  --role-admin-subtle: #f5f3ff;
+
+  /* --------------------------------------------------------------------------
+   * 3. Canvas, Surfaces & Borders
+   * -------------------------------------------------------------------------- */
+  --background: #f8fafc;          /* Clean Slate-50 canvas */
   --card: #ffffff;                /* Surface background for cards & panels */
   --card-hover: #f1f5f9;          /* Interactive card hover */
+  --card-glass: rgba(255, 255, 255, 0.85);
+  --card-glass-border: rgba(226, 232, 240, 0.85);
+
   --border: #e2e8f0;              /* Card & container borders */
   --border-subtle: #f1f5f9;       /* Subtle dividers */
   --input-border: #cbd5e1;        /* Form input border */
 
   /* --------------------------------------------------------------------------
-   * Typography Colors
+   * 4. Typography Colors
    * -------------------------------------------------------------------------- */
   --text-main: #0f172a;           /* Slate 900: High-contrast primary headings */
   --text-body: #334155;           /* Slate 700: Main paragraph & reading text */
@@ -46,17 +92,20 @@
   --text-subtle: #94a3b8;         /* Slate 400: Placeholders & disabled text */
 
   /* --------------------------------------------------------------------------
-   * Corner Radii (Geometry)
+   * 5. Corner Radii (Geometry)
    * -------------------------------------------------------------------------- */
   --radius-sm: 0.375rem;          /* 6px - buttons, chips, tags */
-  --radius-md: 0.75rem;           /* 12px - cards, inputs, dropdowns */
-  --radius-lg: 1rem;              /* 16px - modals, large containers */
-  --radius-full: 9999px;          /* Pill buttons & avatar badges */
+  --radius-md: 0.625rem;          /* 10px - inputs, buttons, list cards */
+  --radius-lg: 0.875rem;          /* 14px - main panels, deal cards */
+  --radius-xl: 1.25rem;           /* 20px - modals, hero containers */
+  --radius-full: 9999px;          /* Pill buttons & badges */
 
   /* --------------------------------------------------------------------------
-   * Elevation / Shadows
+   * 6. Elevation, Glow & Shadows
    * -------------------------------------------------------------------------- */
   --shadow-subtle: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
   --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.05);
   --shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  --shadow-glow: 0 0 25px -5px rgba(79, 70, 229, 0.25);
+  --orbit-glow: rgba(79, 70, 229, 0.12);
 }
