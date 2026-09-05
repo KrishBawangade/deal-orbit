@@ -4,7 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Logo from "@/components/Logo";
-import { useOptionalRole } from "@/context/RoleContext";
+import { useOptionalRole, ROLE_PERSONAS } from "@/context/RoleContext";
+import type { Role } from "@/types";
 import {
   Search,
   ChevronDown,
@@ -15,6 +16,12 @@ import {
   Menu,
   X,
   ArrowRight,
+  RefreshCw,
+  Power,
+  Sparkles,
+  Check,
+  FileText,
+  Kanban,
 } from "lucide-react";
 
 export interface NavItem {
@@ -53,13 +60,8 @@ const DEFAULT_LANDING_LINKS: NavItem[] = [
 ];
 
 const DEFAULT_WORKSPACE_LINKS: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard" },
   { label: "Quotations", href: "/quotations" },
   { label: "Pipeline", href: "/pipeline" },
-  { label: "Approvals", href: "/approvals", badge: "3" },
-  { label: "Fulfillment", href: "/fulfillment" },
-  { label: "Billing", href: "/billing" },
-  { label: "Deal Health", href: "/deal-health" },
 ];
 
 /**
@@ -108,6 +110,8 @@ export default function Navbar({
     roleLabel: "Sales Rep",
     email: "sam.seller@dealorbit.io",
     badgeClass: "badge-role-rep",
+    avatarText: "SS",
+    role: "SALES_REP" as Role,
   };
 
   const getInitials = (name: string) => {
@@ -164,32 +168,44 @@ export default function Navbar({
         </div>
 
         {/* 2. Right: Action Slot (Adaptive by variant) */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           {actions ? (
             actions
           ) : variant === "workspace" ? (
-            /* Workspace Right Slot: Glassmorphic Search & User Profile Avatar */
+            /* Workspace Right Slot: Reload Data & Single Role Profile */
             <>
-              {/* Frosted Glass Search Box */}
-              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--card)]/50 backdrop-blur-md border border-[var(--border)]/70 text-xs text-[var(--text-muted)] cursor-pointer hover:bg-[var(--card)]/80 hover:border-[var(--primary-subtle-border)] transition-all shadow-2xs">
-                <Search className="w-3.5 h-3.5" />
-                <span className="hidden xl:inline">Search deals, SKUs, accounts...</span>
-                <span className="xl:hidden">Search...</span>
-                <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-[var(--card)]/80 border border-[var(--border)]/60 rounded text-[var(--text-subtle)] shadow-2xs">
-                  ⌘K
-                </kbd>
-              </div>
+              {/* Action: Reload Data */}
+              <button
+                type="button"
+                onClick={() => roleContext?.reloadData()}
+                disabled={roleContext?.isReloading}
+                className="btn-ghost flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)]/70 hover:border-[var(--primary)]/40 hover:bg-[var(--primary)]/10 text-[var(--text-main)] transition-all cursor-pointer disabled:opacity-50"
+                title="Reload pricing rules, inventory counts, and approval data from backend"
+                aria-label="Reload Data"
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 ${
+                    roleContext?.isReloading
+                      ? "animate-spin text-[var(--primary)]"
+                      : "text-[var(--text-muted)]"
+                  }`}
+                />
+                <span className="hidden sm:inline">
+                  {roleContext?.isReloading ? "Reloading..." : "Reload Data"}
+                </span>
+              </button>
 
-              {/* Clean Glassmorphic User Avatar Profile Trigger */}
+              {/* Single Role User Profile Trigger */}
               <div className="relative" ref={profileRef}>
                 <button
+                  type="button"
                   onClick={() => setProfileOpen(!profileOpen)}
                   className="flex items-center gap-2 p-1 pl-1.5 pr-2 rounded-full border border-[var(--border)]/70 hover:border-[var(--primary-subtle-border)] bg-[var(--card)]/50 backdrop-blur-md hover:bg-[var(--card)]/80 shadow-2xs transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                   aria-label="User profile menu"
                 >
                   <div className="flex items-center justify-center shrink-0">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[var(--primary)] to-indigo-700 text-white font-bold text-xs flex items-center justify-center shadow-xs ring-2 ring-[var(--card)]">
-                      {getInitials(user.name)}
+                      {user.avatarText || getInitials(user.name)}
                     </div>
                   </div>
 
@@ -205,13 +221,14 @@ export default function Navbar({
                   <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)] hidden sm:inline" />
                 </button>
 
-                {/* Frosted Glass Profile Popover */}
+                {/* Profile Popover */}
                 {profileOpen && (
-                  <div className="absolute right-0 mt-2 w-64 rounded-xl bg-[var(--card)]/85 backdrop-blur-2xl border border-[var(--border)]/70 shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="absolute right-0 mt-2 w-64 rounded-xl bg-[var(--card)]/95 backdrop-blur-2xl border border-[var(--border)]/80 shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    {/* Active User Header */}
                     <div className="px-4 py-3 border-b border-[var(--border-subtle)]/70 space-y-1">
                       <div className="flex items-center gap-2.5">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[var(--primary)] to-indigo-700 text-white font-bold text-sm flex items-center justify-center shadow-xs">
-                          {getInitials(user.name)}
+                          {user.avatarText || getInitials(user.name)}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="font-semibold text-xs text-[var(--text-main)] truncate">
@@ -223,39 +240,44 @@ export default function Navbar({
                         </div>
                       </div>
 
-                      <div className="pt-2">
+                      <div className="pt-2 flex items-center gap-1.5">
                         <span className={`badge text-[10px] py-0.5 px-2 ${user.badgeClass}`}>
                           <Shield className="w-3 h-3 inline mr-1" />
                           {user.roleLabel}
                         </span>
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                          ● Online
+                        </span>
                       </div>
                     </div>
 
+                    {/* Quick Menu Actions */}
                     <div className="py-1 px-1.5 space-y-0.5 text-xs text-[var(--text-body)]">
                       <Link
-                        href="/dashboard"
+                        href="/quotations"
                         onClick={() => setProfileOpen(false)}
                         className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-[var(--card-hover)]/70 hover:text-[var(--text-main)] transition-colors"
                       >
-                        <User className="w-4 h-4 text-[var(--text-muted)]" />
-                        <span>My Account & Profile</span>
+                        <FileText className="w-4 h-4 text-[var(--text-muted)]" />
+                        <span>My Active Quotations</span>
                       </Link>
 
                       <Link
-                        href="/dashboard"
+                        href="/pipeline"
                         onClick={() => setProfileOpen(false)}
                         className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-[var(--card-hover)]/70 hover:text-[var(--text-main)] transition-colors"
                       >
-                        <Settings className="w-4 h-4 text-[var(--text-muted)]" />
-                        <span>Workspace Preferences</span>
+                        <Kanban className="w-4 h-4 text-[var(--text-muted)]" />
+                        <span>Kanban Deal Pipeline</span>
                       </Link>
                     </div>
 
+                    {/* Sign Out Action */}
                     <div className="pt-1 mt-1 border-t border-[var(--border-subtle)]/70 px-1.5">
                       <Link
-                        href="/"
+                        href="/login"
                         onClick={() => setProfileOpen(false)}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-rose-600 hover:bg-rose-50/70 dark:hover:bg-rose-950/30 transition-colors"
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50/70 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
                       >
                         <LogOut className="w-4 h-4" />
                         <span>Sign Out</span>
@@ -268,19 +290,19 @@ export default function Navbar({
           ) : (
             /* Landing Page Right Slot: Sign In & Get Started CTA */
             <div className="flex items-center gap-2.5">
-              <a
-                href="#"
+              <Link
+                href="/login"
                 className="btn-ghost text-xs py-1.5 px-3 hidden sm:inline-flex"
               >
                 Sign In
-              </a>
-              <a
-                href="#"
+              </Link>
+              <Link
+                href="/signup"
                 className="btn-primary text-xs py-1.5 px-3.5 shadow-sm flex items-center gap-1.5"
               >
                 <span>Get Started</span>
                 <ArrowRight className="w-3.5 h-3.5" />
-              </a>
+              </Link>
             </div>
           )}
 
@@ -299,7 +321,7 @@ export default function Navbar({
 
       {/* Frosted Glass Mobile Drawer Menu */}
       {mobileMenuOpen && activeLinks.length > 0 && (
-        <div className="lg:hidden border-t border-[var(--border)]/60 bg-[var(--card)]/80 backdrop-blur-2xl px-4 py-3 space-y-2 shadow-lg">
+        <div className="lg:hidden border-t border-[var(--border)]/60 bg-[var(--card)]/90 backdrop-blur-2xl px-4 py-3 space-y-2 shadow-lg">
           {activeLinks.map((link) => {
             const isActive =
               pathname === link.href ||
@@ -325,15 +347,40 @@ export default function Navbar({
             );
           })}
 
+          {variant === "workspace" && (
+            <div className="pt-2 border-t border-[var(--border-subtle)]/70 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  roleContext?.reloadData();
+                }}
+                className="btn-ghost text-xs py-2 w-full justify-center flex items-center gap-2 border border-[var(--border)]"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Reload Data</span>
+              </button>
+
+              <Link
+                href="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="btn-ghost text-xs py-2 w-full justify-center flex items-center gap-2 border border-rose-500/20 text-rose-600"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sign Out</span>
+              </Link>
+            </div>
+          )}
+
           {variant === "landing" && (
             <div className="pt-2 border-t border-[var(--border-subtle)]/70 flex flex-col gap-2">
-              <a
-                href="#"
+              <Link
+                href="/login"
                 onClick={() => setMobileMenuOpen(false)}
                 className="btn-primary text-center text-xs py-2 w-full justify-center"
               >
                 Get Started
-              </a>
+              </Link>
             </div>
           )}
         </div>
