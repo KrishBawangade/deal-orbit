@@ -137,7 +137,7 @@ export class ProductService {
     limit?: number;
   }) {
     const page = Math.max(1, query.page || 1);
-    const limit = Math.min(100, Math.max(1, query.limit || 20));
+    const limit = Math.min(100, Math.max(1, query.limit || 50));
     const skip = (page - 1) * limit;
 
     const filter: IProductFilter = {
@@ -145,15 +145,26 @@ export class ProductService {
       categoryId: query.categoryId,
       categoryName: query.category,
       isPromoted: query.isPromoted,
-      isActive: query.isActive,
+      isActive: query.isActive !== undefined ? query.isActive : true,
       skip,
       take: limit,
     };
 
     const { products, total } = await productRepository.findAllWithFilters(filter);
 
+    const formattedProducts = products.map((p) => {
+      const totalStock = p.warehouseStock && p.warehouseStock.length > 0
+        ? p.warehouseStock.reduce((acc: number, ws: any) => acc + Math.max(0, ws.onHandQuantity - ws.reservedQuantity), 0)
+        : (p.category?.name === 'HARDWARE' ? 0 : 999);
+
+      return {
+        ...p,
+        totalStock,
+      };
+    });
+
     return {
-      products,
+      products: formattedProducts,
       pagination: {
         total,
         page,
@@ -171,7 +182,14 @@ export class ProductService {
     if (!product) {
       throw new AppError(`Product with ID ${id} not found`, 404);
     }
-    return product;
+    const totalStock = product.warehouseStock && product.warehouseStock.length > 0
+      ? product.warehouseStock.reduce((acc: number, ws: any) => acc + Math.max(0, ws.onHandQuantity - ws.reservedQuantity), 0)
+      : (product.category?.name === 'HARDWARE' ? 0 : 999);
+
+    return {
+      ...product,
+      totalStock,
+    };
   }
 
   /**

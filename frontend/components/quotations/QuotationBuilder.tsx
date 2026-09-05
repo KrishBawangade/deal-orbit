@@ -25,11 +25,14 @@ import {
   Send,
   Truck,
   Info,
+  RotateCw,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRole } from "@/context/RoleContext";
 import { useQuotations, QuotationRecord, QuotationLineItem } from "@/context/QuotationsContext";
 import { CATALOG_PRODUCTS, CUSTOMER_ACCOUNTS, ICatalogProduct, ICustomerAccount } from "@/config/catalogData";
+import { useProductCatalog } from "@/hooks/useProductCatalog";
 import { getRankedRecommendations, IRankedRecommendation } from "@/config/upsellRules";
 import UpsellCrossSellDrawer from "./UpsellCrossSellDrawer";
 import { ProductCategory, CustomerTier } from "@/types";
@@ -60,12 +63,21 @@ export default function QuotationBuilder({ initialQuote }: QuotationBuilderProps
     return initialQuote?.id || getNextQuoteId();
   }, [initialQuote, getNextQuoteId]);
 
-  // 3. Catalog Filtering
+  // 3. Live Product Catalog (Fetched from DealOrbit REST API)
+  const {
+    catalog: liveCatalog,
+    isLoading: isCatalogLoading,
+    isLive: isCatalogLive,
+    error: catalogError,
+    refreshCatalog,
+  } = useProductCatalog();
+
+  // 4. Catalog Filtering
   const [categoryFilter, setCategoryFilter] = useState<"ALL" | "HARDWARE" | "SERVICES" | "SUBSCRIPTIONS">("ALL");
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredCatalog = useMemo(() => {
-    return CATALOG_PRODUCTS.filter((prod) => {
+    return liveCatalog.filter((prod) => {
       if (categoryFilter === "HARDWARE" && prod.category !== "HARDWARE") return false;
       if (categoryFilter === "SERVICES" && prod.category !== "SERVICES") return false;
       if (categoryFilter === "SUBSCRIPTIONS" && prod.category !== "SOFTWARE") return false;
@@ -80,7 +92,7 @@ export default function QuotationBuilder({ initialQuote }: QuotationBuilderProps
       }
       return true;
     });
-  }, [categoryFilter, searchQuery]);
+  }, [liveCatalog, categoryFilter, searchQuery]);
 
   // 4. Order Lines Cart State
   const [cartLines, setCartLines] = useState<QuotationLineItem[]>(() => {
@@ -577,11 +589,42 @@ export default function QuotationBuilder({ initialQuote }: QuotationBuilderProps
           <div className="card-glass p-5 rounded-2xl border border-[var(--border)] space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-base font-bold text-[var(--text-main)] font-heading flex items-center gap-2">
-                  <Package className="w-4 h-4 text-[var(--primary)]" />
-                  <span>Product Catalog</span>
-                </h2>
-                <p className="text-xs text-[var(--text-muted)]">
+                <div className="flex items-center gap-2.5">
+                  <h2 className="text-base font-bold text-[var(--text-main)] font-heading flex items-center gap-2">
+                    <Package className="w-4 h-4 text-[var(--primary)]" />
+                    <span>Product Catalog</span>
+                  </h2>
+
+                  {/* Live API Status Badge */}
+                  {isCatalogLoading ? (
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-[var(--primary)] bg-[var(--primary)]/10 border border-[var(--primary)]/20 px-2 py-0.5 rounded-full">
+                      <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                      <span>Syncing API...</span>
+                    </span>
+                  ) : isCatalogLive ? (
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span>Live API ({liveCatalog.length} SKUs)</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-full">
+                      <span>Offline Cache ({liveCatalog.length} SKUs)</span>
+                    </span>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      refreshCatalog();
+                      toast.success("Syncing live products from DealOrbit API...");
+                    }}
+                    title="Refresh products & warehouse stock from API"
+                    className="p-1 rounded-md border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors cursor-pointer"
+                  >
+                    <RotateCw className={`w-3 h-3 ${isCatalogLoading ? "animate-spin" : ""}`} />
+                  </button>
+                </div>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">
                   Pick commercial items across Hardware, Services, and Subscriptions.
                 </p>
               </div>
@@ -610,7 +653,7 @@ export default function QuotationBuilder({ initialQuote }: QuotationBuilderProps
                     : "text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--card-hover)]"
                 }`}
               >
-                All Categories ({CATALOG_PRODUCTS.length})
+                All Categories ({liveCatalog.length})
               </button>
 
               <button

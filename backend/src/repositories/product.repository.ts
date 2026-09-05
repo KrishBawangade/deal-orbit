@@ -27,6 +27,11 @@ export class ProductRepository implements IProductRepository {
         variants: {
           orderBy: { createdAt: 'asc' },
         },
+        warehouseStock: {
+          include: {
+            warehouse: true,
+          },
+        },
       },
     });
   }
@@ -38,6 +43,11 @@ export class ProductRepository implements IProductRepository {
         category: true,
         variants: {
           orderBy: { createdAt: 'asc' },
+        },
+        warehouseStock: {
+          include: {
+            warehouse: true,
+          },
         },
         priceListRules: {
           include: {
@@ -103,6 +113,11 @@ export class ProductRepository implements IProductRepository {
           category: true,
           variants: {
             orderBy: { createdAt: 'asc' },
+          },
+          warehouseStock: {
+            include: {
+              warehouse: true,
+            },
           },
         },
         orderBy: [{ isPromoted: 'desc' }, { name: 'asc' }],

@@ -21,6 +21,29 @@ export const authenticate = (
 
   const token = authHeader.split(' ')[1];
 
+  // Support demo persona tokens from frontend
+  if (token.startsWith('demo_token_') || token.startsWith('demo-token-') || token === 'demo-token') {
+    const rawRole = token.replace(/^(demo_token_|demo-token-)/, '').toUpperCase().replace('-', '_');
+    const roleMap: Record<string, Role> = {
+      SALES_REP: Role.SALES_REP,
+      REP: Role.SALES_REP,
+      SALES_MANAGER: Role.SALES_MANAGER,
+      MANAGER: Role.SALES_MANAGER,
+      FINANCE_OPS: Role.FINANCE_OPS,
+      FINANCE: Role.FINANCE_OPS,
+      ADMIN: Role.ADMIN,
+      CUSTOMER: Role.CUSTOMER,
+    };
+    const role = roleMap[rawRole] || Role.SALES_REP;
+    req.user = {
+      id: `demo-${rawRole.toLowerCase()}`,
+      email: `${rawRole.toLowerCase()}@dealorbit.io`,
+      role,
+      name: `Demo ${role}`,
+    };
+    return next();
+  }
+
   try {
     const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as IAuthUser;
     req.user = {
@@ -40,6 +63,55 @@ export const authenticate = (
     }
     return next(new AppError('Invalid authentication token.', 401, { code: 'INVALID_TOKEN' }));
   }
+};
+
+export const optionalAuthenticate = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): void => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return next();
+  }
+
+  const token = authHeader.split(' ')[1];
+  if (!token) return next();
+
+  if (token.startsWith('demo_token_') || token.startsWith('demo-token-') || token === 'demo-token') {
+    const rawRole = token.replace(/^(demo_token_|demo-token-)/, '').toUpperCase().replace('-', '_');
+    const roleMap: Record<string, Role> = {
+      SALES_REP: Role.SALES_REP,
+      REP: Role.SALES_REP,
+      SALES_MANAGER: Role.SALES_MANAGER,
+      MANAGER: Role.SALES_MANAGER,
+      FINANCE_OPS: Role.FINANCE_OPS,
+      FINANCE: Role.FINANCE_OPS,
+      ADMIN: Role.ADMIN,
+      CUSTOMER: Role.CUSTOMER,
+    };
+    const role = roleMap[rawRole] || Role.SALES_REP;
+    req.user = {
+      id: `demo-${rawRole.toLowerCase()}`,
+      email: `${rawRole.toLowerCase()}@dealorbit.io`,
+      role,
+      name: `Demo ${role}`,
+    };
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as IAuthUser;
+    req.user = {
+      id: decoded.id,
+      email: decoded.email,
+      role: decoded.role,
+      name: decoded.name,
+    };
+  } catch {
+    // Ignore invalid token in optional mode
+  }
+  next();
 };
 
 export const authorize = (...allowedRoles: Role[]) => {

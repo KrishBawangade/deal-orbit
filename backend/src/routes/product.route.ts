@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { productController } from '../controllers/product.controller';
 import { validate } from '../middlewares/validate';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { authenticate, optionalAuthenticate, authorize } from '../middlewares/auth.middleware';
 import { Role } from '../types';
 import {
   createProductSchema,
@@ -13,15 +13,12 @@ import {
 
 const router = Router();
 
-// Base Authentication for all product operations
-router.use(authenticate);
-
 // ==========================================
-// Categories (Internal staff read-only)
+// Categories (Public & Internal Staff)
 // ==========================================
 router.get(
   '/categories',
-  authorize(Role.SALES_REP, Role.SALES_MANAGER, Role.FINANCE_OPS, Role.ADMIN),
+  optionalAuthenticate,
   productController.listCategories
 );
 
@@ -30,29 +27,36 @@ router.get(
 // ==========================================
 router.get(
   '/',
-  authorize(Role.SALES_REP, Role.SALES_MANAGER, Role.FINANCE_OPS, Role.ADMIN),
+  optionalAuthenticate,
   validate(queryProductSchema),
   productController.listProducts
 );
+
 router.post(
   '/',
+  authenticate,
   authorize(Role.ADMIN),
   validate(createProductSchema),
   productController.createProduct
 );
+
 router.get(
   '/:id',
-  authorize(Role.SALES_REP, Role.SALES_MANAGER, Role.FINANCE_OPS, Role.ADMIN),
+  optionalAuthenticate,
   productController.getProductById
 );
+
 router.put(
   '/:id',
+  authenticate,
   authorize(Role.ADMIN),
   validate(updateProductSchema),
   productController.updateProduct
 );
+
 router.delete(
   '/:id',
+  authenticate,
   authorize(Role.ADMIN),
   productController.deleteProduct
 );
