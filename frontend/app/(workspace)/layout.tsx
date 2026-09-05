@@ -4,6 +4,7 @@ import React from "react";
 import Navbar from "@/components/Navbar";
 import { RoleProvider, useRole } from "@/context/RoleContext";
 import { QuotationsProvider } from "@/context/QuotationsContext";
+import { DealHealthProvider } from "@/context/DealHealthContext";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -23,6 +24,7 @@ function WorkspaceContent({ children }: { children: React.ReactNode }) {
     if (pathname.startsWith("/quotations")) return "Active & Draft Quotations";
     if (pathname.startsWith("/pipeline")) return "Deal Pipeline Kanban";
     if (pathname.startsWith("/dashboard")) return "Sales Workspace Dashboard";
+    if (pathname.startsWith("/deal-health")) return "Deal Health Radar";
     return "Sales Operations Workspace";
   };
 
@@ -47,7 +49,9 @@ export default function WorkspaceLayout({
   return (
     <RoleProvider>
       <QuotationsProvider>
-        <WorkspaceContent>{children}</WorkspaceContent>
+        <DealHealthProvider>
+          <WorkspaceContent>{children}</WorkspaceContent>
+        </DealHealthProvider>
       </QuotationsProvider>
     </RoleProvider>
   );

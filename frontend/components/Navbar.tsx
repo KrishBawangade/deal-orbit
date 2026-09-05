@@ -59,10 +59,7 @@ const DEFAULT_LANDING_LINKS: NavItem[] = [
   { label: "Telemetry", href: "#telemetry" },
 ];
 
-const DEFAULT_WORKSPACE_LINKS: NavItem[] = [
-  { label: "Quotations", href: "/quotations" },
-  { label: "Pipeline", href: "/pipeline" },
-];
+const DEFAULT_WORKSPACE_LINKS: NavItem[] = [];
 
 /**
  * Reusable Glassmorphism Navbar Component for both Landing Page and Workspace.
