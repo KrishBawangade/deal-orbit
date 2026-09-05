@@ -30,6 +30,8 @@ import { toast } from "sonner";
 import { useRole } from "@/context/RoleContext";
 import { useQuotations, QuotationRecord, QuotationLineItem } from "@/context/QuotationsContext";
 import { CATALOG_PRODUCTS, CUSTOMER_ACCOUNTS, ICatalogProduct, ICustomerAccount } from "@/config/catalogData";
+import { getRankedRecommendations, IRankedRecommendation } from "@/config/upsellRules";
+import UpsellCrossSellDrawer from "./UpsellCrossSellDrawer";
 import { ProductCategory, CustomerTier } from "@/types";
 
 interface QuotationBuilderProps {
@@ -119,7 +121,16 @@ export default function QuotationBuilder({ initialQuote }: QuotationBuilderProps
     initialQuote?.orderDiscountPercent || 0
   );
 
-  // 6. Confirmation Modal State
+  // 6. Upsell & Cross-Sell State (Special Flow B5 - Slide-over Drawer)
+  const [isSuggestionsDrawerOpen, setIsSuggestionsDrawerOpen] = useState(false);
+  const [dismissedRuleIds, setDismissedRuleIds] = useState<string[]>([]);
+
+  const handleDismissRecommendation = (ruleId: string) => {
+    setDismissedRuleIds((prev) => [...prev, ruleId]);
+    toast.info("Suggestion dismissed from active stack");
+  };
+
+  // 7. Confirmation Modal State
   const [confirmationModal, setConfirmationModal] = useState<{
     isOpen: boolean;
     quoteId: string;
@@ -376,6 +387,23 @@ export default function QuotationBuilder({ initialQuote }: QuotationBuilderProps
       isApprovalRequired,
     };
   }, [cartLines, orderDiscountPercent]);
+
+  // Ranked Upsell & Cross-Sell recommendations evaluated against active cart lines & margin
+  const rankedRecommendations: IRankedRecommendation[] = useMemo(() => {
+    return getRankedRecommendations(
+      cartLines,
+      dismissedRuleIds,
+      financialTotals.netTaxableAmount,
+      financialTotals.totalCost,
+      financialTotals.blendedMargin
+    );
+  }, [
+    cartLines,
+    dismissedRuleIds,
+    financialTotals.netTaxableAmount,
+    financialTotals.totalCost,
+    financialTotals.blendedMargin,
+  ]);
 
   // Format currency
   const formatCurrency = (val: number) => {
@@ -712,6 +740,17 @@ export default function QuotationBuilder({ initialQuote }: QuotationBuilderProps
                 <h2 className="text-base font-bold text-[var(--text-main)] font-heading">
                   Order Lines & Cart ({cartLines.length})
                 </h2>
+                {rankedRecommendations.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setIsSuggestionsDrawerOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-[var(--primary)]/10 text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white border border-[var(--primary)]/30 hover:border-transparent transition-all shadow-2xs cursor-pointer group"
+                    title="Click to open smart suggestions drawer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-[var(--primary)] group-hover:text-white transition-colors" />
+                    <span>✨ Smart Suggestions ({rankedRecommendations.length})</span>
+                  </button>
+                )}
               </div>
               <div className="text-xs text-[var(--text-muted)]">
                 Adjust quantities & line discounts in real time
@@ -1173,6 +1212,16 @@ export default function QuotationBuilder({ initialQuote }: QuotationBuilderProps
           </div>
         </div>
       )}
+
+      {/* 4. Slide-Over Smart Suggestions Drawer (Special Flow B5) */}
+      <UpsellCrossSellDrawer
+        isOpen={isSuggestionsDrawerOpen}
+        onClose={() => setIsSuggestionsDrawerOpen(false)}
+        recommendations={rankedRecommendations}
+        onAddRecommendation={handleAddToCart}
+        onDismissRecommendation={handleDismissRecommendation}
+        currentBlendedMargin={financialTotals.blendedMargin}
+      />
     </div>
   );
 }
