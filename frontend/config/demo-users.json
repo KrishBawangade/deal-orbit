@@ -1,0 +1,97 @@
+[
+  {
+    "id": "demo-user-sales-rep",
+    "role": "SALES_REP",
+    "roleLabel": "Sales Representative",
+    "name": "Sarah Jenkins",
+    "email": "sales.rep@dealorbit.io",
+    "password": "DealOrbit@123",
+    "title": "Senior Enterprise Account Executive",
+    "department": "Sales Operations",
+    "avatar": "SJ",
+    "description": "Builds complex quotations, configures pricing, and submits discount requests.",
+    "permissions": [
+      "Create & edit quotations",
+      "Configure product line items",
+      "Request manager discounts",
+      "Monitor deal pipeline status"
+    ],
+    "defaultPath": "/quotations"
+  },
+  {
+    "id": "demo-user-sales-manager",
+    "role": "SALES_MANAGER",
+    "roleLabel": "Sales Manager",
+    "name": "Marcus Vance",
+    "email": "sales.manager@dealorbit.io",
+    "password": "DealOrbit@123",
+    "title": "Regional Sales Director",
+    "department": "Sales Leadership",
+    "avatar": "MV",
+    "description": "Evaluates margin risk, approves steep discounts, and overrides thresholds.",
+    "permissions": [
+      "Review & approve quotes (>15% discount)",
+      "Reassign approval workflows",
+      "Team quota and pipeline analytics",
+      "Customer margin guardrail controls"
+    ],
+    "defaultPath": "/approvals"
+  },
+  {
+    "id": "demo-user-finance-ops",
+    "role": "FINANCE_OPS",
+    "roleLabel": "Finance / Operations",
+    "name": "Elena Rostova",
+    "email": "finance.ops@dealorbit.io",
+    "password": "DealOrbit@123",
+    "title": "VP of Revenue Operations & Finance",
+    "department": "Finance & Order Ops",
+    "avatar": "ER",
+    "description": "Governs contract payment terms, oversees billing cycles, and validates orders.",
+    "permissions": [
+      "Validate payment terms (Net 30/60/90)",
+      "Convert accepted quotes to sales orders",
+      "ERP invoice & billing synchronization",
+      "Revenue recognition auditing"
+    ],
+    "defaultPath": "/billing"
+  },
+  {
+    "id": "demo-user-customer",
+    "role": "CUSTOMER",
+    "roleLabel": "Customer / Buyer",
+    "name": "David Chen",
+    "email": "customer.acme@dealorbit.io",
+    "password": "DealOrbit@123",
+    "title": "VP of Procurement (Acme Corp)",
+    "department": "Global Procurement",
+    "avatar": "DC",
+    "description": "Reviews received quotations, proposes counter-offers, and e-signs contracts.",
+    "permissions": [
+      "Access Customer Portal quotation view",
+      "Submit line-item discount counter-offers",
+      "Chat directly with sales representatives",
+      "Electronically sign and accept quotations"
+    ],
+    "defaultPath": "/portal/demo-token"
+  },
+  {
+    "id": "demo-user-admin",
+    "role": "ADMIN",
+    "roleLabel": "Administrator",
+    "name": "Alex Rivera",
+    "email": "admin@dealorbit.io",
+    "password": "DealOrbit@123",
+    "title": "Chief System Architect & Admin",
+    "department": "Platform Operations",
+    "avatar": "AR",
+    "description": "Comprehensive administration, audit log inspection, and system policies.",
+    "permissions": [
+      "Full role & user permissions management",
+      "Workflow approval matrix customization",
+      "Audit trail & security telemetry review",
+      "System integration & API configuration"
+    ],
+    "defaultPath": "/"
+  }
+]

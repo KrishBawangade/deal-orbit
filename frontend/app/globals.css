@@ -108,11 +108,13 @@ body {
   cursor: pointer;
   cursor: pointer;
 }
+
 .btn-primary:hover {
   background-color: var(--primary-hover);
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
   transform: translateY(-0.5px);
 }
+
 .btn-primary:active {
   background-color: var(--primary-active);
   transform: translateY(0);
@@ -136,10 +138,12 @@ body {
   border: 1px solid var(--primary-subtle-border);
   cursor: pointer;
 }
+
 .btn-secondary:hover {
   filter: brightness(0.96);
   box-shadow: var(--shadow-subtle);
 }
+
 .btn-secondary:active {
   transform: scale(0.98);
 }
@@ -160,10 +164,12 @@ body {
   transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
 }
+
 .btn-outline:hover {
   background-color: var(--card-hover);
   border-color: #cbd5e1;
 }
+
 .btn-outline:active {
   transform: scale(0.98);
 }
@@ -184,6 +190,7 @@ body {
   transition: all 150ms ease;
   cursor: pointer;
 }
+
 .btn-ghost:hover {
   background-color: var(--card-hover);
   color: var(--text-main);
@@ -204,6 +211,7 @@ body {
   transition: all 150ms ease;
   cursor: pointer;
 }
+
 .btn-danger:hover {
   filter: brightness(0.9);
 }
@@ -229,6 +237,7 @@ body {
   box-shadow: var(--shadow-card);
   transition: all 200ms ease;
 }
+
 .card-surface:hover {
   box-shadow: var(--shadow-hover);
   border-color: #cbd5e1;
@@ -253,6 +262,7 @@ body {
   padding: 1rem 1.25rem;
   transition: all 150ms ease;
 }
+
 .stat-tile:hover {
   border-color: var(--primary-subtle-border);
   transform: translateY(-1px);
@@ -269,31 +279,37 @@ body {
   border-radius: var(--radius-full);
   letter-spacing: 0.02em;
 }
+
 .badge-primary {
   background-color: var(--primary-subtle);
   color: var(--primary);
   border: 1px solid var(--primary-subtle-border);
 }
+
 .badge-accent {
   background-color: var(--accent-subtle);
   color: #0e7490;
   border: 1px solid var(--accent-subtle-border);
 }
+
 .badge-success {
   background-color: var(--success-subtle);
   color: #047857;
   border: 1px solid var(--success-subtle-border);
 }
+
 .badge-warning {
   background-color: var(--warning-subtle);
   color: #b45309;
   border: 1px solid var(--warning-subtle-border);
 }
+
 .badge-destructive {
   background-color: var(--destructive-subtle);
   color: #b91c1c;
   border: 1px solid var(--destructive-subtle-border);
 }
+
 .badge-gold {
   background-color: var(--tier-gold-subtle);
   color: var(--tier-gold);
@@ -306,16 +322,19 @@ body {
   color: var(--role-rep);
   border: 1px solid #c7d2fe;
 }
+
 .badge-role-manager {
   background-color: var(--role-manager-subtle);
   color: var(--role-manager);
   border: 1px solid #fde68a;
 }
+
 .badge-role-finance {
   background-color: var(--role-finance-subtle);
   color: var(--role-finance);
   border: 1px solid #bae6fd;
 }
+
 .badge-role-admin {
   background-color: var(--role-admin-subtle);
   color: var(--role-admin);
@@ -339,6 +358,7 @@ body {
   letter-spacing: -0.03em;
   color: var(--text-main);
 }
+
 @media (min-width: 768px) {
   .type-h1 {
     font-size: 3.25rem;
@@ -354,6 +374,7 @@ body {
   letter-spacing: -0.025em;
   color: var(--text-main);
 }
+
 @media (min-width: 768px) {
   .type-h2 {
     font-size: 2.25rem;
@@ -388,17 +409,10 @@ body {
   color: var(--text-muted);
 }
 
-/* Orbit lines subtle animation */
-@keyframes orbit-pulse {
-  0%, 100% {
-    opacity: 0.45;
-  }
-  50% {
-    opacity: 0.85;
-  }
-}
-
-.orbit-line {
-  stroke-dasharray: 4 4;
-  animation: orbit-pulse 4s ease-in-out infinite;
+/* Hide Next.js dev indicator badge */
+nextjs-portal,
+[data-nextjs-dev-indicator],
+[data-nextjs-toast-wrapper],
+#__next-build-watcher {
+  display: none !important;
 }

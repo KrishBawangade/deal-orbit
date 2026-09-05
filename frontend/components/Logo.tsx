@@ -208,3 +208,5 @@ export default function Logo({
 
   return content;
 }
+
+export { Logo, Logo as DealOrbitLogo };
