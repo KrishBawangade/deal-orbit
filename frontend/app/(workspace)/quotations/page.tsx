@@ -18,16 +18,22 @@ import {
   ChevronRight,
   TrendingUp,
   Layers,
+  RefreshCw,
 } from "lucide-react";
 
 export default function QuotationsPage() {
   const { activeUser } = useRole();
-  const { quotations } = useQuotations();
+  const { quotations, isLoading, refetchQuotations } = useQuotations();
   const [filterTab, setFilterTab] = useState<"ALL" | "DRAFT" | "IN_REVIEW">("ALL");
   const [searchQuery, setSearchQuery] = useState("");
 
   const draftCount = quotations.filter((q) => q.status === "DRAFT").length;
   const inReviewCount = quotations.filter((q) => q.status === "IN_REVIEW").length;
+  const totalPipelineValue = quotations.reduce((sum, q) => sum + (q.totalAmount || 0), 0);
+  const avgMargin =
+    quotations.length > 0
+      ? (quotations.reduce((sum, q) => sum + (q.blendedMargin || 0), 0) / quotations.length).toFixed(1)
+      : "0.0";
 
   const filteredQuotes = quotations.filter((q) => {
     if (filterTab !== "ALL" && q.status !== filterTab) return false;
@@ -55,6 +61,17 @@ export default function QuotationsPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => refetchQuotations()}
+            disabled={isLoading}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--text-main)] transition-colors cursor-pointer disabled:opacity-60 shadow-2xs"
+            title="Fetch live quotes from backend API"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-[var(--primary)]" : "text-[var(--text-muted)]"}`} />
+            <span>{isLoading ? "Syncing..." : "Sync Live API"}</span>
+          </button>
+
           <Link
             href="/quotations/new"
             className="btn-primary text-xs py-2 px-4 flex items-center gap-2 shadow-sm cursor-pointer"
@@ -87,9 +104,11 @@ export default function QuotationsPage() {
         <div className="card-glass p-4 rounded-xl border border-[var(--border)]/70 flex items-center justify-between">
           <div className="space-y-1">
             <div className="text-xs text-[var(--text-muted)] font-medium">Weighted Pipeline Value</div>
-            <div className="text-2xl font-bold text-[var(--text-main)] font-heading">₹32,80,000</div>
-            <div className="text-[11px] text-emerald-600 font-medium">
-              +14% vs. target quota
+            <div className="text-2xl font-bold text-[var(--text-main)] font-heading" suppressHydrationWarning>
+              ₹{totalPipelineValue.toLocaleString("en-IN")}
+            </div>
+            <div className="text-[11px] text-emerald-600 font-medium" suppressHydrationWarning>
+              {quotations.length} Active Deals Tracked
             </div>
           </div>
           <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
@@ -101,7 +120,9 @@ export default function QuotationsPage() {
         <div className="card-glass p-4 rounded-xl border border-[var(--border)]/70 flex items-center justify-between">
           <div className="space-y-1">
             <div className="text-xs text-[var(--text-muted)] font-medium">Blended Margin Floor</div>
-            <div className="text-2xl font-bold text-[var(--text-main)] font-heading">21.5%</div>
+            <div className="text-2xl font-bold text-[var(--text-main)] font-heading" suppressHydrationWarning>
+              {avgMargin}%
+            </div>
             <div className="text-[11px] text-emerald-600 font-medium">
               Protected across tiers
             </div>
@@ -197,103 +218,117 @@ export default function QuotationsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border-subtle)]/70 text-[var(--text-body)]">
-              {filteredQuotes.map((q) => (
-                <tr
-                  key={q.id}
-                  className="hover:bg-[var(--card-hover)]/60 transition-colors group"
-                >
-                  {/* Quote ID */}
-                  <td className="px-4 py-3.5 font-mono font-bold text-[var(--primary)]">
-                    {q.id}
-                  </td>
-
-                  {/* Customer Account & Tier */}
-                  <td className="px-4 py-3.5">
-                    <div className="font-semibold text-[var(--text-main)] text-sm">
-                      {q.customerName}
-                    </div>
-                    <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-1.5 mt-0.5">
-                      <span className="font-medium text-[var(--text-main)]">{q.tier} Tier</span>
-                      <span>•</span>
-                      <span>Ceiling: {q.tierCeiling}%</span>
-                      <span>•</span>
-                      <span>{q.lineItemsCount} Items</span>
-                    </div>
-                  </td>
-
-                  {/* Grand Total */}
-                  <td className="px-4 py-3.5 font-semibold text-[var(--text-main)] font-heading text-sm">
-                    {q.total}
-                  </td>
-
-                  {/* Gross Margin */}
-                  <td className="px-4 py-3.5">
-                    <div className="inline-flex items-center gap-1.5">
-                      <span
-                        className={`badge text-xs font-bold ${
-                          q.marginStatus === "HIGH"
-                            ? "badge-success"
-                            : q.marginStatus === "MEDIUM"
-                            ? "badge-warning"
-                            : "badge-destructive"
-                        }`}
-                      >
-                        {q.blendedMargin}%
-                      </span>
-                    </div>
-                  </td>
-
-                  {/* Risk Score */}
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-1.5 text-xs">
-                      {q.riskScore > 30 ? (
-                        <span className="text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1">
-                          <ShieldAlert className="w-3.5 h-3.5" />
-                          <span>{q.riskScore} (Manager Review)</span>
-                        </span>
-                      ) : (
-                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                          <ShieldCheck className="w-3.5 h-3.5" />
-                          <span>{q.riskScore} (Low Risk)</span>
-                        </span>
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Status Badge */}
-                  <td className="px-4 py-3.5">
-                    <span
-                      className={`badge text-[10px] font-semibold ${
-                        q.status === "DRAFT"
-                          ? "badge-role-rep"
-                          : q.status === "IN_REVIEW"
-                          ? "badge-accent"
-                          : "badge-success"
-                      }`}
-                    >
-                      {q.status}
-                    </span>
-                  </td>
-
-                  {/* Updated At */}
-                  <td className="px-4 py-3.5 text-[var(--text-muted)] text-[11px]">
-                    {q.updatedAt}
-                  </td>
-
-                  {/* Actions */}
-                  <td className="px-4 py-3.5 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link
-                        href={`/quotations/${q.id}`}
-                        className="btn-outline text-[11px] py-1 px-2.5 flex items-center gap-1 font-medium"
-                      >
-                        <span>Open</span>
-                        <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--primary)] transition-colors" />
-                      </Link>
+              {filteredQuotes.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-12 text-center text-[var(--text-muted)]">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <FileText className="w-8 h-8 text-[var(--text-muted)]/40" />
+                      <p className="text-sm font-semibold text-[var(--text-main)]">No quotations found</p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {searchQuery ? `No deals matching "${searchQuery}"` : "No commercial proposals in this filter."}
+                      </p>
                     </div>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredQuotes.map((q) => (
+                  <tr
+                    key={q.id}
+                    className="hover:bg-[var(--card-hover)]/60 transition-colors group"
+                  >
+                    {/* Quote ID */}
+                    <td className="px-4 py-3.5 font-mono font-bold text-[var(--primary)]">
+                      {q.id}
+                    </td>
+
+                    {/* Customer Account & Tier */}
+                    <td className="px-4 py-3.5">
+                      <div className="font-semibold text-[var(--text-main)] text-sm">
+                        {q.customerName}
+                      </div>
+                      <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-1.5 mt-0.5">
+                        <span className="font-medium text-[var(--text-main)]">{q.tier} Tier</span>
+                        <span>•</span>
+                        <span>Ceiling: {q.tierCeiling}%</span>
+                        <span>•</span>
+                        <span>{q.lineItemsCount} Items</span>
+                      </div>
+                    </td>
+
+                    {/* Grand Total */}
+                    <td className="px-4 py-3.5 font-semibold text-[var(--text-main)] font-heading text-sm">
+                      {q.total}
+                    </td>
+
+                    {/* Gross Margin */}
+                    <td className="px-4 py-3.5">
+                      <div className="inline-flex items-center gap-1.5">
+                        <span
+                          className={`badge text-xs font-bold ${
+                            q.marginStatus === "HIGH"
+                              ? "badge-success"
+                              : q.marginStatus === "MEDIUM"
+                              ? "badge-warning"
+                              : "badge-destructive"
+                          }`}
+                        >
+                          {q.blendedMargin}%
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Risk Score */}
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-1.5 text-xs">
+                        {q.riskScore > 30 ? (
+                          <span className="text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1">
+                            <ShieldAlert className="w-3.5 h-3.5" />
+                            <span>{q.riskScore} (Manager Review)</span>
+                          </span>
+                        ) : (
+                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                            <span>{q.riskScore} (Low Risk)</span>
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Status Badge */}
+                    <td className="px-4 py-3.5">
+                      <span
+                        className={`badge text-[10px] font-semibold ${
+                          q.status === "DRAFT"
+                            ? "badge-role-rep"
+                            : q.status === "IN_REVIEW"
+                            ? "badge-accent"
+                            : "badge-success"
+                        }`}
+                      >
+                        {q.status}
+                      </span>
+                    </td>
+
+                    {/* Updated At */}
+                    <td className="px-4 py-3.5 text-[var(--text-muted)] text-[11px]">
+                      {q.updatedAt}
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-4 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          href={`/quotations/${q.id}`}
+                          className="btn-outline text-[11px] py-1 px-2.5 flex items-center gap-1 font-medium"
+                        >
+                          <span>Open</span>
+                          <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--primary)] transition-colors" />
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

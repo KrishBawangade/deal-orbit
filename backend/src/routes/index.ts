@@ -7,6 +7,7 @@ import warehouseRouter from './warehouse.route';
 import fulfillmentRouter from './fulfillment.route';
 import adminRouter from './admin.route';
 import billingRouter from './billing.route';
+import quotationRouter from './quotation.route';
 
 const apiRouter = Router();
 
@@ -19,5 +20,6 @@ apiRouter.use('/warehouses', warehouseRouter);
 apiRouter.use('/fulfillment', fulfillmentRouter);
 apiRouter.use('/admin', adminRouter);
 apiRouter.use('/billing', billingRouter);
+apiRouter.use('/quotations', quotationRouter);
 
 export default apiRouter;

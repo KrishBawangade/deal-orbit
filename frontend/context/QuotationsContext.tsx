@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import type { CustomerTier, QuoteStatus, ICustomerNegotiationMessage } from "@/types";
+import { siteConfig } from "@/config/site";
 
 export interface QuotationLineItem {
   id: string;
@@ -248,6 +249,9 @@ const INITIAL_QUOTATIONS: QuotationRecord[] = [
 
 interface QuotationsContextType {
   quotations: QuotationRecord[];
+  isLoading: boolean;
+  error: string | null;
+  refetchQuotations: () => Promise<QuotationRecord[] | undefined>;
   addQuotation: (quote: QuotationRecord) => void;
   updateQuotation: (quote: QuotationRecord) => void;
   getQuotation: (id: string) => QuotationRecord | undefined;
@@ -287,6 +291,55 @@ const STORAGE_KEY = "dealorbit_quotations_data";
 export function QuotationsProvider({ children }: { children: React.ReactNode }) {
   const [quotations, setQuotations] = useState<QuotationRecord[]>(INITIAL_QUOTATIONS);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refetchQuotations = useCallback(async (): Promise<QuotationRecord[] | undefined> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const token =
+        typeof window !== "undefined"
+          ? localStorage.getItem("dealorbit_token") ||
+            document.cookie
+              .split("; ")
+              .find((row) => row.startsWith("dealorbit_token="))
+              ?.split("=")[1]
+          : undefined;
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const res = await fetch(`${siteConfig.apiUrl}/api/quotations`, {
+        method: "GET",
+        headers,
+      });
+
+      if (!res.ok) {
+        throw new Error(`API responded with HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data?.quotations)) {
+        const serverQuotes: QuotationRecord[] = data.data.quotations;
+        setQuotations(serverQuotes);
+        if (typeof window !== "undefined") {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(serverQuotes));
+        }
+        setIsLoading(false);
+        return serverQuotes;
+      }
+    } catch (err: any) {
+      console.warn("Quotation API fetch notice (using cache/default):", err?.message);
+      setError(err?.message || "Failed to fetch quotations");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     try {
@@ -298,7 +351,8 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
       // fallback to INITIAL_QUOTATIONS
     }
     setIsLoaded(true);
-  }, []);
+    refetchQuotations();
+  }, [refetchQuotations]);
 
   useEffect(() => {
     if (isLoaded) {
@@ -583,6 +637,9 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
     <QuotationsContext.Provider
       value={{
         quotations,
+        isLoading,
+        error,
+        refetchQuotations,
         addQuotation,
         updateQuotation,
         getQuotation,

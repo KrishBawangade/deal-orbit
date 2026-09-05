@@ -297,10 +297,10 @@ export default function FulfillmentSplitScreen() {
             <button
               type="button"
               onClick={handleSimulateMidFulfillmentArrival}
-              className="btn-ghost text-xs py-2 px-3 border border-indigo-500/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold text-xs shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer"
               title="Simulate replenishment arrival while order is in fulfillment"
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <Sparkles className="w-4 h-4 text-indigo-200" />
               <span>Simulate Stock Arrival</span>
             </button>
           </div>

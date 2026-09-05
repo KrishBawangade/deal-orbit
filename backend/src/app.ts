@@ -30,8 +30,9 @@ export const createApp = (): Application => {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // API base route
+  // API base routes
   app.use('/api/v1', apiRouter);
+  app.use('/api', apiRouter);
 
   // 404 handler
   app.use(notFoundHandler);
