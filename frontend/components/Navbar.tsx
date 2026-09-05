@@ -94,12 +94,18 @@ export default function Navbar({
       ? [
         { label: "Approvals", href: "/approvals" },
       ]
+      : roleContext?.currentRole === "ADMIN"
+      ? [
+        { label: "Admin Suite", href: "/admin" },
+        { label: "Quotations", href: "/quotations" },
+        { label: "Approvals", href: "/approvals" },
+        { label: "Pipeline", href: "/pipeline" },
+        { label: "Fulfillment & Split", href: "/fulfillment" },
+        { label: "Billing & Subscriptions", href: "/billing" },
+      ]
       : [
         { label: "Quotations", href: "/quotations" },
         { label: "Pipeline", href: "/pipeline" },
-        { label: "Billing & Subscriptions", href: "/billing" },
-        { label: "Fulfillment & Split", href: "/fulfillment" },
-        { label: "Customer Portal", href: "/portal/demo-token" },
       ];
 
   const activeLinks =

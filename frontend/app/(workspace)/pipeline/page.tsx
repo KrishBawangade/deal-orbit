@@ -4,118 +4,126 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRole } from "@/context/RoleContext";
+import { useQuotations, QuotationRecord } from "@/context/QuotationsContext";
 import {
   Kanban,
   Plus,
   Search,
-  Filter,
   ArrowRight,
   ShieldCheck,
   ShieldAlert,
   Clock,
-  Sparkles,
-  TrendingUp,
+  RefreshCw,
 } from "lucide-react";
 
-interface PipelineDeal {
+export type PipelineStage = "DRAFT" | "UNDER_REVIEW" | "NEGOTIATING" | "CONFIRMED" | "FULFILLMENT";
+
+export interface PipelineDeal {
   id: string;
   customerName: string;
   tier: string;
   value: string;
+  amount: number;
   margin: number;
-  stage: "DRAFT" | "UNDER_REVIEW" | "NEGOTIATING" | "CONFIRMED" | "FULFILLMENT";
+  stage: PipelineStage;
   riskScore: number;
   assignedRep: string;
   daysActive: number;
 }
 
-const INITIAL_DEALS: PipelineDeal[] = [
-  {
-    id: "QT-2026-0044",
-    customerName: "Stark Enterprises",
-    tier: "Enterprise Tier",
-    value: "₹9,50,000",
-    margin: 24.8,
-    stage: "DRAFT",
-    riskScore: 14.0,
-    assignedRep: "Sam Seller",
-    daysActive: 2,
-  },
-  {
-    id: "QT-2026-0045",
-    customerName: "Wayne Logistics",
-    tier: "Silver Tier",
-    value: "₹4,48,600",
-    margin: 22.1,
-    stage: "DRAFT",
-    riskScore: 12.0,
-    assignedRep: "Sam Seller",
-    daysActive: 1,
-  },
-  {
-    id: "QT-2026-0043",
-    customerName: "Acme Corp",
-    tier: "Gold Tier",
-    value: "₹18,81,392",
-    margin: 18.4,
-    stage: "UNDER_REVIEW",
-    riskScore: 38.5,
-    assignedRep: "Sam Seller",
-    daysActive: 3,
-  },
-  {
-    id: "QT-2026-0039",
-    customerName: "Cyberdyne Systems",
-    tier: "Enterprise Tier",
-    value: "₹24,50,000",
-    margin: 21.0,
-    stage: "NEGOTIATING",
-    riskScore: 28.0,
-    assignedRep: "Sam Seller",
-    daysActive: 5,
-  },
-  {
-    id: "QT-2026-0036",
-    customerName: "Umbrella Health",
-    tier: "Gold Tier",
-    value: "₹12,40,000",
-    margin: 26.5,
-    stage: "CONFIRMED",
-    riskScore: 8.0,
-    assignedRep: "Sam Seller",
-    daysActive: 7,
-  },
-  {
-    id: "QT-2026-0031",
-    customerName: "Initech Cloud",
-    tier: "Silver Tier",
-    value: "₹6,80,000",
-    margin: 23.0,
-    stage: "FULFILLMENT",
-    riskScore: 10.0,
-    assignedRep: "Sam Seller",
-    daysActive: 12,
-  },
-];
-
-const COLUMNS = [
+const COLUMNS: { id: PipelineStage; title: string; color: string }[] = [
   { id: "DRAFT", title: "Draft Proposals", color: "border-slate-500/40 text-slate-700 dark:text-slate-300" },
   { id: "UNDER_REVIEW", title: "Under Manager Review", color: "border-amber-500/40 text-amber-600 dark:text-amber-400" },
   { id: "NEGOTIATING", title: "Customer Negotiating", color: "border-blue-500/40 text-blue-600 dark:text-blue-400" },
   { id: "CONFIRMED", title: "Digitally Confirmed", color: "border-emerald-500/40 text-emerald-600 dark:text-emerald-400" },
   { id: "FULFILLMENT", title: "Warehouse Fulfillment", color: "border-purple-500/40 text-purple-600 dark:text-purple-400" },
-] as const;
+];
+
+function mapQuoteToStage(quote: QuotationRecord): PipelineStage {
+  const status = (quote.status || "").toUpperCase();
+  if (status === "DRAFT") return "DRAFT";
+  if (
+    status === "IN_REVIEW" ||
+    quote.approvalStage === "SALES_MANAGER" ||
+    quote.approvalStage === "FINANCE"
+  ) {
+    return "UNDER_REVIEW";
+  }
+  if (
+    status === "CONFIRMED" ||
+    status === "ACCEPTED" ||
+    status === "CUSTOMER_ACCEPTED"
+  ) {
+    return "CONFIRMED";
+  }
+  if (
+    status === "FULFILLED" ||
+    status === "CLOSED_WON" ||
+    Boolean(quote.salesOrderNumber)
+  ) {
+    return "FULFILLMENT";
+  }
+  // APPROVED, CUSTOMER_REVIEW, NEGOTIATING, or default
+  return "NEGOTIATING";
+}
+
+function mapQuoteToDeal(quote: QuotationRecord, fallbackRepName: string): PipelineDeal {
+  const stage = mapQuoteToStage(quote);
+
+  let daysActive = 1;
+  if (quote.updatedAt) {
+    const updatedTime = new Date(quote.updatedAt).getTime();
+    if (!isNaN(updatedTime)) {
+      daysActive = Math.max(1, Math.floor((Date.now() - updatedTime) / (1000 * 60 * 60 * 24)));
+    }
+  }
+
+  const tierFormatted = quote.tier
+    ? `${quote.tier.charAt(0).toUpperCase() + quote.tier.slice(1).toLowerCase()} Tier`
+    : "Enterprise Tier";
+
+  const totalAmount = quote.totalAmount || 0;
+  const formattedValue =
+    quote.total ||
+    (totalAmount > 0
+      ? `₹${totalAmount.toLocaleString("en-IN")}`
+      : "₹0");
+
+  return {
+    id: quote.id,
+    customerName: quote.customerName || "Enterprise Client",
+    tier: tierFormatted,
+    value: formattedValue,
+    amount: totalAmount,
+    margin: typeof quote.blendedMargin === "number" ? quote.blendedMargin : 20.0,
+    stage,
+    riskScore: typeof quote.riskScore === "number" ? quote.riskScore : 10.0,
+    assignedRep: quote.repName || fallbackRepName || "Sam Seller",
+    daysActive,
+  };
+}
 
 export default function PipelinePage() {
   const router = useRouter();
   const { activeUser } = useRole();
+  const { quotations, isLoading, refetchQuotations } = useQuotations();
   const [search, setSearch] = useState("");
 
-  const filteredDeals = INITIAL_DEALS.filter((d) => {
+  const deals: PipelineDeal[] = quotations.map((q) => mapQuoteToDeal(q, activeUser.name));
+
+  const filteredDeals = deals.filter((d) => {
     if (!search.trim()) return true;
     const term = search.toLowerCase();
     return d.customerName.toLowerCase().includes(term) || d.id.toLowerCase().includes(term);
   });
+
+  const totalPipelineValue = deals.reduce((acc, d) => acc + d.amount, 0);
+  const formattedPipelineValue =
+    totalPipelineValue >= 10000000
+      ? `₹${(totalPipelineValue / 10000000).toFixed(2)} Cr`
+      : totalPipelineValue >= 100000
+      ? `₹${(totalPipelineValue / 100000).toFixed(2)} Lakh`
+      : `₹${totalPipelineValue.toLocaleString("en-IN")}`;
 
   return (
     <div className="space-y-6">
@@ -126,18 +134,31 @@ export default function PipelinePage() {
             Deal Pipeline Kanban
           </h1>
           <p className="text-xs text-[var(--text-muted)] mt-1">
-            Visual pipeline board for {activeUser.name} tracking quote progression, risk levels, and deal health across stages.
+            Visual pipeline board for {activeUser.name} tracking live quote progression, risk levels, and deal health across stages.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <Link
-            href="/quotations/new"
-            className="btn-primary text-xs py-2 px-4 flex items-center gap-2 shadow-sm cursor-pointer"
+          <button
+            type="button"
+            onClick={() => refetchQuotations()}
+            disabled={isLoading}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--text-main)] transition-colors cursor-pointer disabled:opacity-60 shadow-2xs"
+            title="Fetch live quotes and pipeline deals from backend API"
           >
-            <Plus className="w-4 h-4" />
-            <span>New Quotation</span>
-          </Link>
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-[var(--primary)]" : "text-[var(--text-muted)]"}`} />
+            <span>{isLoading ? "Syncing..." : "Sync Live API"}</span>
+          </button>
+
+          {activeUser.role !== "FINANCE_OPS" && (
+            <Link
+              href="/quotations/new"
+              className="btn-primary text-xs py-2 px-4 flex items-center gap-2 shadow-sm cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>New Quotation</span>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -145,11 +166,17 @@ export default function PipelinePage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[var(--card)]/60 p-3 rounded-xl border border-[var(--border)] text-xs">
         <div className="flex items-center gap-4 text-[var(--text-muted)]">
           <div>
-            Total Active Pipeline: <strong className="text-[var(--text-main)] font-heading">₹76,49,992</strong>
+            Total Active Pipeline:{" "}
+            <strong className="text-[var(--text-main)] font-heading">
+              {formattedPipelineValue}
+            </strong>
           </div>
           <span>•</span>
           <div>
-            Total Deals: <strong className="text-[var(--text-main)]">{filteredDeals.length} Deals</strong>
+            Total Deals:{" "}
+            <strong className="text-[var(--text-main)]">
+              {filteredDeals.length} {filteredDeals.length === 1 ? "Deal" : "Deals"}
+            </strong>
           </div>
         </div>
 
@@ -169,10 +196,7 @@ export default function PipelinePage() {
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 items-start">
         {COLUMNS.map((col) => {
           const colDeals = filteredDeals.filter((d) => d.stage === col.id);
-          const colTotalValue = colDeals.reduce((acc, d) => {
-            const raw = parseInt(d.value.replace(/[^\d]/g, ""), 10);
-            return acc + (isNaN(raw) ? 0 : raw);
-          }, 0);
+          const colTotalValue = colDeals.reduce((acc, d) => acc + d.amount, 0);
 
           return (
             <div
@@ -186,7 +210,9 @@ export default function PipelinePage() {
                     {col.title}
                   </h3>
                   <div className="text-[10px] text-[var(--text-muted)]">
-                    ₹{(colTotalValue / 100000).toFixed(1)}L Total
+                    {colTotalValue >= 100000
+                      ? `₹${(colTotalValue / 100000).toFixed(1)}L Total`
+                      : `₹${colTotalValue.toLocaleString("en-IN")} Total`}
                   </div>
                 </div>
                 <span className="w-5 h-5 rounded-full bg-[var(--card)] border border-[var(--border)] text-[10px] font-bold flex items-center justify-center text-[var(--text-main)]">

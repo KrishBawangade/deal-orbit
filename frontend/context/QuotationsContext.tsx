@@ -643,10 +643,17 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
         headers["Authorization"] = `Bearer ${token}`;
       }
 
-      const res = await fetch(`${siteConfig.apiUrl}/api/quotations`, {
+      let res = await fetch(`${siteConfig.apiUrl}/api/v1/quotations`, {
         method: "GET",
         headers,
-      });
+      }).catch(() => null);
+
+      if (!res || !res.ok) {
+        res = await fetch(`${siteConfig.apiUrl}/api/quotations`, {
+          method: "GET",
+          headers,
+        });
+      }
 
       if (!res.ok) {
         throw new Error(`API responded with HTTP ${res.status}`);
