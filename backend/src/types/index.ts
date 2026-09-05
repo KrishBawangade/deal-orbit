@@ -45,3 +45,6 @@ export * from './admin.types';
 // 14. Price Lists & Currency / Tier Pricing
 export * from './priceList.types';
 
+// 15. Warehouse & Stock Management
+export * from './warehouse.types';
+
