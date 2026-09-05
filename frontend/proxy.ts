@@ -18,20 +18,25 @@ export function proxy(request: NextRequest) {
   const isAuthRoute =
     pathname.startsWith('/login') ||
     pathname.startsWith('/signup') ||
-    pathname.startsWith('/forgot-password');
+    pathname.startsWith('/forgot-password') ||
+    pathname.startsWith('/auth');
 
-  // If already logged in and visiting auth pages (/login, /signup), redirect to role workspace
-  if (token && isAuthRoute) {
+  // If already logged in and visiting auth pages or landing page, redirect to role workspace
+  if (token && (isAuthRoute || pathname === '/')) {
+    let dest = '/quotations';
     if (role === 'CUSTOMER') {
-      return NextResponse.redirect(new URL('/portal/demo-token', request.url));
+      dest = '/portal/demo-token';
+    } else if (role === 'ADMIN') {
+      dest = '/admin';
+    } else if (role === 'SALES_MANAGER' || role === 'FINANCE_OPS') {
+      dest = '/approvals';
     }
-    if (role === 'ADMIN') {
-      return NextResponse.redirect(new URL('/admin', request.url));
-    }
-    if (role === 'SALES_MANAGER' || role === 'FINANCE_OPS') {
-      return NextResponse.redirect(new URL('/approvals', request.url));
-    }
-    return NextResponse.redirect(new URL('/quotations', request.url));
+
+    const redirectResponse = NextResponse.redirect(new URL(dest, request.url));
+    redirectResponse.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    redirectResponse.headers.set('Pragma', 'no-cache');
+    redirectResponse.headers.set('Expires', '0');
+    return redirectResponse;
   }
 
   // Pass request through so each page's PageAuthGuard inspects auth & role

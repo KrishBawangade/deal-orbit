@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import { useOptionalRole } from "@/context/RoleContext";
 import type { Role } from "@/types";
 
+import { WorkspaceHistoryGuard } from "./WorkspaceHistoryGuard";
+
 interface PageAuthGuardProps {
   allowedRoles: Role[];
   pageName?: string;
@@ -80,5 +82,10 @@ export function PageAuthGuard({
     notFound();
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <WorkspaceHistoryGuard />
+      {children}
+    </>
+  );
 }

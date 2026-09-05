@@ -101,7 +101,7 @@ export function HubspotSignUpCard({
 
       setLoading(false);
       toast.success("Account created successfully! Welcome to DealOrbit.");
-      router.push("/login");
+      router.replace("/login");
     } catch {
       setLoading(false);
       const serverErrMsg = "Registration service offline (http://localhost:5000). Please start the backend API.";
@@ -114,8 +114,8 @@ export function HubspotSignUpCard({
     toast.info(`Connecting with ${provider}...`);
     setTimeout(() => {
       toast.success(`Account verified with ${provider}! Redirecting to workspace...`);
-      router.push("/");
-    }, 800);
+      router.replace("/quotations");
+    }, 400);
   };
 
   return (

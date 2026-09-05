@@ -1,12 +1,24 @@
 import React from "react";
 import { HelpCircle } from "lucide-react";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { ROLE_HOME_PATHS } from "@/context/RoleContext";
+import type { Role } from "@/types";
+import { AuthRedirectGuard } from "@/components/auth/AuthRedirectGuard";
 
-
-export default function AuthLayout({
+export default async function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("dealorbit_token")?.value;
+  const role = (cookieStore.get("dealorbit_role")?.value as Role) || "SALES_REP";
+
+  if (token) {
+    const destination = ROLE_HOME_PATHS[role] || "/quotations";
+    redirect(destination);
+  }
   return (
     <div className="min-h-screen flex flex-col bg-[var(--background)] relative overflow-x-hidden selection:bg-[var(--primary-subtle)] selection:text-[var(--primary)]">
       {/* Background Decorative Ambient Blobs & Subtle Grid */}
@@ -22,11 +34,11 @@ export default function AuthLayout({
         />
       </div>
 
-
-
       {/* Centered Main Area */}
       <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 my-4">
-        {children}
+        <AuthRedirectGuard>
+          {children}
+        </AuthRedirectGuard>
       </main>
 
       {/* Auth Footer */}

@@ -32,20 +32,50 @@ export function ZohoSignInCard({
   const [passwordError, setPasswordError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Auto-redirect if user arrives at login while already having an active session
+  React.useEffect(() => {
+    try {
+      const token =
+        localStorage.getItem("dealorbit_token") ||
+        document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("dealorbit_token="))
+          ?.split("=")[1];
+
+      if (token) {
+        let role: Role = "SALES_REP";
+        const storedUser = localStorage.getItem("dealorbit_user");
+        if (storedUser) {
+          const parsed = JSON.parse(storedUser);
+          if (parsed?.role) role = parsed.role as Role;
+        } else {
+          const cookieRole = document.cookie
+            .split("; ")
+            .find((row) => row.startsWith("dealorbit_role="))
+            ?.split("=")[1];
+          if (cookieRole) role = cookieRole as Role;
+        }
+
+        const destination = ROLE_HOME_PATHS[role] || "/quotations";
+        window.location.replace(destination);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const performDemoLogin = (user: IDemoUser) => {
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      const token = `demo_token_${user.role.toLowerCase()}`;
-      localStorage.setItem("dealorbit_token", token);
-      localStorage.setItem("dealorbit_user", JSON.stringify(user));
-      document.cookie = `dealorbit_token=${token}; path=/; max-age=604800; SameSite=Lax`;
-      document.cookie = `dealorbit_role=${user.role}; path=/; max-age=604800; SameSite=Lax`;
-      toast.success(`Welcome, ${user.name}! Signed in as ${user.roleLabel}`);
+    const token = `demo_token_${user.role.toLowerCase()}`;
+    localStorage.setItem("dealorbit_token", token);
+    localStorage.setItem("dealorbit_user", JSON.stringify(user));
+    document.cookie = `dealorbit_token=${token}; path=/; max-age=604800; SameSite=Lax`;
+    document.cookie = `dealorbit_role=${user.role}; path=/; max-age=604800; SameSite=Lax`;
+    toast.success(`Welcome, ${user.name}! Signed in as ${user.roleLabel}`);
 
-      const destination = ROLE_HOME_PATHS[user.role as Role] || "/quotations";
-      router.push(destination);
-    }, 350);
+    const destination = ROLE_HOME_PATHS[user.role as Role] || "/quotations";
+    // Replace login route immediately at the window location level so destination is the only page in stack
+    window.location.replace(destination);
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -119,12 +149,13 @@ export function ZohoSignInCard({
         toast.success(`Welcome back, ${user.name}!`);
 
         const destination = ROLE_HOME_PATHS[user.role as Role] || "/quotations";
-        router.push(destination);
+        // Replace login route immediately at the window location level
+        window.location.replace(destination);
         return;
       }
 
       toast.success("Welcome back to DealOrbit!");
-      router.push("/quotations");
+      window.location.replace("/quotations");
     } catch {
       // Offline fallback: check credentials against demo accounts
       const demoUser = getDemoUserByEmail(cleanEmail);
@@ -141,10 +172,20 @@ export function ZohoSignInCard({
 
   const handleGoogleSignIn = () => {
     toast.info("Connecting to Google authentication...");
-    setTimeout(() => {
-      toast.success("Signed in with Google!");
-      router.push("/");
-    }, 800);
+    const defaultUser = {
+      role: "SALES_REP" as Role,
+      name: "Google User",
+      email: "user@dealorbit.io",
+      badgeClass: "badge-role-rep",
+      avatarText: "GU",
+    };
+    const token = "demo_token_google";
+    localStorage.setItem("dealorbit_token", token);
+    localStorage.setItem("dealorbit_user", JSON.stringify(defaultUser));
+    document.cookie = `dealorbit_token=${token}; path=/; max-age=604800; SameSite=Lax`;
+    document.cookie = `dealorbit_role=SALES_REP; path=/; max-age=604800; SameSite=Lax`;
+    toast.success("Signed in with Google!");
+    window.location.replace("/quotations");
   };
 
   return (

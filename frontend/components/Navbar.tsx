@@ -265,8 +265,8 @@ export default function Navbar({
 
                     {/* Sign Out Action */}
                     <div className="p-1.5">
-                      <Link
-                        href="/login"
+                      <button
+                        type="button"
                         onClick={() => {
                           setProfileOpen(false);
                           localStorage.removeItem("dealorbit_token");
@@ -274,12 +274,13 @@ export default function Navbar({
                           document.cookie = "dealorbit_token=; path=/; max-age=0";
                           document.cookie = "dealorbit_role=; path=/; max-age=0";
                           toast.info("Signed out of DealOrbit");
+                          window.location.replace("/login");
                         }}
                         className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50/70 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
                       >
                         <LogOut className="w-4 h-4" />
                         <span>Sign Out</span>
-                      </Link>
+                      </button>
                     </div>
                   </div>
                 )}
@@ -290,12 +291,14 @@ export default function Navbar({
             <div className="flex items-center gap-2.5">
               <Link
                 href="/login"
+                replace
                 className="btn-ghost text-xs py-1.5 px-3 hidden sm:inline-flex"
               >
                 Sign In
               </Link>
               <Link
                 href="/signup"
+                replace
                 className="btn-primary text-xs py-1.5 px-3.5 shadow-sm flex items-center gap-1.5"
               >
                 <span>Get Started</span>
@@ -358,14 +361,22 @@ export default function Navbar({
                 <span>Reload Data</span>
               </button>
 
-              <Link
-                href="/login"
-                onClick={() => setMobileMenuOpen(false)}
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  localStorage.removeItem("dealorbit_token");
+                  localStorage.removeItem("dealorbit_user");
+                  document.cookie = "dealorbit_token=; path=/; max-age=0";
+                  document.cookie = "dealorbit_role=; path=/; max-age=0";
+                  toast.info("Signed out of DealOrbit");
+                  window.location.replace("/login");
+                }}
                 className="btn-ghost text-xs py-2 w-full justify-center flex items-center gap-2 border border-rose-500/20 text-rose-600"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>Sign Out</span>
-              </Link>
+              </button>
             </div>
           )}
 
@@ -373,6 +384,7 @@ export default function Navbar({
             <div className="pt-2 border-t border-[var(--border-subtle)]/70 flex flex-col gap-2">
               <Link
                 href="/login"
+                replace
                 onClick={() => setMobileMenuOpen(false)}
                 className="btn-primary text-center text-xs py-2 w-full justify-center"
               >
