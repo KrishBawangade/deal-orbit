@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { AppError } from '../utils/appError';
-import { IAuthUser } from '../types';
+import { IAuthUser, Role } from '../types';
 
 export const authenticate = (
   req: Request,
@@ -13,7 +13,9 @@ export const authenticate = (
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return next(
-      new AppError('Authentication required. Please provide a Bearer token.', 401)
+      new AppError('Authentication required. Please provide a Bearer token.', 401, {
+        code: 'UNAUTHENTICATED',
+      })
     );
   }
 
@@ -24,6 +26,8 @@ export const authenticate = (
     req.user = {
       id: decoded.id,
       email: decoded.email,
+      role: decoded.role,
+      name: decoded.name,
     };
     next();
   } catch (error) {
@@ -34,6 +38,34 @@ export const authenticate = (
         })
       );
     }
-    return next(new AppError('Invalid authentication token.', 401));
+    return next(new AppError('Invalid authentication token.', 401, { code: 'INVALID_TOKEN' }));
   }
+};
+
+export const authorize = (...allowedRoles: Role[]) => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      return next(
+        new AppError('Authentication required. Please log in first.', 401, {
+          code: 'UNAUTHENTICATED',
+        })
+      );
+    }
+
+    if (allowedRoles.length > 0 && (!req.user.role || !allowedRoles.includes(req.user.role))) {
+      return next(
+        new AppError(
+          `Forbidden: You do not have permission to access this resource. Required role(s): ${allowedRoles.join(', ')}`,
+          403,
+          {
+            code: 'FORBIDDEN',
+            requiredRoles: allowedRoles,
+            currentRole: req.user.role,
+          }
+        )
+      );
+    }
+
+    next();
+  };
 };

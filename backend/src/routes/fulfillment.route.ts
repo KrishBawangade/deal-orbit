@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { fulfillmentController } from '../controllers/fulfillment.controller';
 import { validate } from '../middlewares/validate';
+import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { Role } from '../types';
 import {
   checkFeasibilitySchema,
   splitOrderSchema,
@@ -11,21 +13,55 @@ import {
 const router = Router();
 
 // ==========================================
-// Feasibility Check
+// Feasibility Check (Sales Rep, Manager, Finance, Admin)
 // ==========================================
-router.post('/check-feasibility', validate(checkFeasibilitySchema), fulfillmentController.checkFeasibility);
-router.get('/check-feasibility', fulfillmentController.checkFeasibility);
+router.post(
+  '/check-feasibility',
+  authenticate,
+  authorize(Role.SALES_REP, Role.SALES_MANAGER, Role.FINANCE_OPS, Role.ADMIN),
+  validate(checkFeasibilitySchema),
+  fulfillmentController.checkFeasibility
+);
+router.get(
+  '/check-feasibility',
+  authenticate,
+  authorize(Role.SALES_REP, Role.SALES_MANAGER, Role.FINANCE_OPS, Role.ADMIN),
+  fulfillmentController.checkFeasibility
+);
 
 // ==========================================
-// Auto-Split Engine
+// Auto-Split Engine (Manager, Finance, Admin)
 // ==========================================
-router.post('/split-order/:orderId', validate(splitOrderSchema), fulfillmentController.splitOrder);
-router.put('/split-order/:splitId/override', validate(overrideSplitSchema), fulfillmentController.overrideSplit);
+router.post(
+  '/split-order/:orderId',
+  authenticate,
+  authorize(Role.SALES_MANAGER, Role.FINANCE_OPS, Role.ADMIN),
+  validate(splitOrderSchema),
+  fulfillmentController.splitOrder
+);
+router.put(
+  '/split-order/:splitId/override',
+  authenticate,
+  authorize(Role.SALES_MANAGER, Role.FINANCE_OPS, Role.ADMIN),
+  validate(overrideSplitSchema),
+  fulfillmentController.overrideSplit
+);
 
 // ==========================================
 // Backorders Consolidation & Order View
 // ==========================================
-router.post('/backorders/:id/consolidate', validate(consolidateBackorderSchema), fulfillmentController.consolidateBackorder);
-router.get('/orders/:orderId', fulfillmentController.getOrderFulfillment);
+router.post(
+  '/backorders/:id/consolidate',
+  authenticate,
+  authorize(Role.FINANCE_OPS, Role.ADMIN),
+  validate(consolidateBackorderSchema),
+  fulfillmentController.consolidateBackorder
+);
+router.get(
+  '/orders/:orderId',
+  authenticate,
+  authorize(Role.SALES_REP, Role.SALES_MANAGER, Role.FINANCE_OPS, Role.ADMIN),
+  fulfillmentController.getOrderFulfillment
+);
 
 export default router;

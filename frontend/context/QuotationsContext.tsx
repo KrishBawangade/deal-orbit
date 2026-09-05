@@ -285,25 +285,26 @@ const QuotationsContext = createContext<QuotationsContextType | null>(null);
 const STORAGE_KEY = "dealorbit_quotations_data";
 
 export function QuotationsProvider({ children }: { children: React.ReactNode }) {
-  const [quotations, setQuotations] = useState<QuotationRecord[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {
-          // fallback to initial
-        }
-      }
-    }
-    return INITIAL_QUOTATIONS;
-  });
+  const [quotations, setQuotations] = useState<QuotationRecord[]>(INITIAL_QUOTATIONS);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        setQuotations(JSON.parse(saved));
+      }
+    } catch {
+      // fallback to INITIAL_QUOTATIONS
+    }
+    setIsLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (isLoaded) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(quotations));
     }
-  }, [quotations]);
+  }, [quotations, isLoaded]);
 
   const addQuotation = useCallback((quote: QuotationRecord) => {
     setQuotations((prev) => [quote, ...prev]);

@@ -81,7 +81,7 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
   const [isReloading, setIsReloading] = useState<boolean>(false);
   const router = useRouter();
 
-  // Hydrate role on mount from localStorage if logged in as demo user
+  // Synchronize initial role on mount from stored session
   React.useEffect(() => {
     try {
       const stored = localStorage.getItem("dealorbit_user");
@@ -92,12 +92,13 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch {
-      // ignore
+      // ignore parsing errors
     }
   }, []);
 
   const setRole = useCallback((role: Role) => {
     setRoleState(role);
+    document.cookie = `dealorbit_role=${role}; path=/; max-age=604800; SameSite=Lax`;
     const persona = ROLE_PERSONAS[role] || ROLE_PERSONAS.SALES_REP;
     try {
       localStorage.setItem("dealorbit_user", JSON.stringify({
@@ -129,6 +130,10 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
   }, [isReloading]);
 
   const closeWorkspace = useCallback(() => {
+    localStorage.removeItem("dealorbit_token");
+    localStorage.removeItem("dealorbit_user");
+    document.cookie = "dealorbit_token=; path=/; max-age=0";
+    document.cookie = "dealorbit_role=; path=/; max-age=0";
     toast.info("Closing Workspace Session", {
       description: "Returning to public landing portal...",
     });

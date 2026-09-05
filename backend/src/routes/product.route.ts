@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { productController } from '../controllers/product.controller';
 import { validate } from '../middlewares/validate';
+import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { Role } from '../types';
 import {
   createProductSchema,
   updateProductSchema,
@@ -11,26 +13,74 @@ import {
 
 const router = Router();
 
+// Base Authentication for all product operations
+router.use(authenticate);
+
 // ==========================================
-// Categories
+// Categories (Internal staff read-only)
 // ==========================================
-router.get('/categories', productController.listCategories);
+router.get(
+  '/categories',
+  authorize(Role.SALES_REP, Role.SALES_MANAGER, Role.FINANCE_OPS, Role.ADMIN),
+  productController.listCategories
+);
 
 // ==========================================
 // Product Catalog & General Info
 // ==========================================
-router.get('/', validate(queryProductSchema), productController.listProducts);
-router.post('/', validate(createProductSchema), productController.createProduct);
-router.get('/:id', productController.getProductById);
-router.put('/:id', validate(updateProductSchema), productController.updateProduct);
-router.delete('/:id', productController.deleteProduct);
+router.get(
+  '/',
+  authorize(Role.SALES_REP, Role.SALES_MANAGER, Role.FINANCE_OPS, Role.ADMIN),
+  validate(queryProductSchema),
+  productController.listProducts
+);
+router.post(
+  '/',
+  authorize(Role.ADMIN),
+  validate(createProductSchema),
+  productController.createProduct
+);
+router.get(
+  '/:id',
+  authorize(Role.SALES_REP, Role.SALES_MANAGER, Role.FINANCE_OPS, Role.ADMIN),
+  productController.getProductById
+);
+router.put(
+  '/:id',
+  authorize(Role.ADMIN),
+  validate(updateProductSchema),
+  productController.updateProduct
+);
+router.delete(
+  '/:id',
+  authorize(Role.ADMIN),
+  productController.deleteProduct
+);
 
 // ==========================================
 // Product Variants (Attribute, Values, Extra Prices)
 // ==========================================
-router.get('/:productId/variants', productController.listVariants);
-router.post('/:productId/variants', validate(createVariantSchema), productController.addVariant);
-router.put('/:productId/variants/:variantId', validate(updateVariantSchema), productController.updateVariant);
-router.delete('/:productId/variants/:variantId', productController.deleteVariant);
+router.get(
+  '/:productId/variants',
+  authorize(Role.SALES_REP, Role.SALES_MANAGER, Role.FINANCE_OPS, Role.ADMIN),
+  productController.listVariants
+);
+router.post(
+  '/:productId/variants',
+  authorize(Role.ADMIN),
+  validate(createVariantSchema),
+  productController.addVariant
+);
+router.put(
+  '/:productId/variants/:variantId',
+  authorize(Role.ADMIN),
+  validate(updateVariantSchema),
+  productController.updateVariant
+);
+router.delete(
+  '/:productId/variants/:variantId',
+  authorize(Role.ADMIN),
+  productController.deleteVariant
+);
 
 export default router;

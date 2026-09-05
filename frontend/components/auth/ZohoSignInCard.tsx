@@ -34,10 +34,18 @@ export function ZohoSignInCard({
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      localStorage.setItem("dealorbit_token", `demo_token_${user.role.toLowerCase()}`);
+      const token = `demo_token_${user.role.toLowerCase()}`;
+      localStorage.setItem("dealorbit_token", token);
       localStorage.setItem("dealorbit_user", JSON.stringify(user));
+      document.cookie = `dealorbit_token=${token}; path=/; max-age=604800; SameSite=Lax`;
+      document.cookie = `dealorbit_role=${user.role}; path=/; max-age=604800; SameSite=Lax`;
       toast.success(`Welcome, ${user.name}! Signed in as ${user.roleLabel}`);
-      router.push(user.defaultPath || "/");
+
+      let destination = "/quotations";
+      if (user.role === "CUSTOMER") destination = "/portal/demo-token";
+      else if (user.role === "ADMIN") destination = "/admin";
+
+      router.push(destination);
     }, 350);
   };
 
@@ -101,11 +109,26 @@ export function ZohoSignInCard({
       }
 
       setLoading(false);
-      toast.success("Welcome back to DealOrbit!");
-      if (data?.data?.tokens?.accessToken) {
-        localStorage.setItem("dealorbit_token", data.data.tokens.accessToken);
+      const token = data?.data?.tokens?.accessToken;
+      const user = data?.data?.user;
+
+      if (token && user) {
+        localStorage.setItem("dealorbit_token", token);
+        localStorage.setItem("dealorbit_user", JSON.stringify(user));
+        document.cookie = `dealorbit_token=${token}; path=/; max-age=604800; SameSite=Lax`;
+        document.cookie = `dealorbit_role=${user.role}; path=/; max-age=604800; SameSite=Lax`;
+        toast.success(`Welcome back, ${user.name}!`);
+
+        let destination = "/quotations";
+        if (user.role === "CUSTOMER") destination = "/portal/demo-token";
+        else if (user.role === "ADMIN") destination = "/admin";
+
+        router.push(destination);
+        return;
       }
-      router.push("/");
+
+      toast.success("Welcome back to DealOrbit!");
+      router.push("/quotations");
     } catch {
       // Offline fallback: check credentials against demo accounts
       const demoUser = getDemoUserByEmail(cleanEmail);

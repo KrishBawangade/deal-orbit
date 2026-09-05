@@ -71,10 +71,10 @@ export default function QuotationsPage() {
         <div className="card-glass p-4 rounded-xl border border-[var(--border)]/70 flex items-center justify-between">
           <div className="space-y-1">
             <div className="text-xs text-[var(--text-muted)] font-medium">Active Quotations</div>
-            <div className="text-2xl font-bold text-[var(--text-main)] font-heading">
+            <div className="text-2xl font-bold text-[var(--text-main)] font-heading" suppressHydrationWarning>
               {quotations.length} Deals
             </div>
-            <div className="text-[11px] text-emerald-600 font-medium">
+            <div className="text-[11px] text-emerald-600 font-medium" suppressHydrationWarning>
               {draftCount} Drafts, {inReviewCount} In Review
             </div>
           </div>

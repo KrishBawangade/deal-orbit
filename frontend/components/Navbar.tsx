@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Logo from "@/components/Logo";
+import { toast } from "sonner";
 import { useOptionalRole, ROLE_PERSONAS, ROLE_HOME_PATHS } from "@/context/RoleContext";
 import type { Role } from "@/types";
 import {
@@ -359,7 +360,14 @@ export default function Navbar({
                     <div className="pt-1 mt-1 border-t border-[var(--border-subtle)]/70 px-1.5">
                       <Link
                         href="/login"
-                        onClick={() => setProfileOpen(false)}
+                        onClick={() => {
+                          setProfileOpen(false);
+                          localStorage.removeItem("dealorbit_token");
+                          localStorage.removeItem("dealorbit_user");
+                          document.cookie = "dealorbit_token=; path=/; max-age=0";
+                          document.cookie = "dealorbit_role=; path=/; max-age=0";
+                          toast.info("Signed out of DealOrbit");
+                        }}
                         className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50/70 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
                       >
                         <LogOut className="w-4 h-4" />

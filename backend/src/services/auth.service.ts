@@ -47,7 +47,12 @@ export class AuthService {
   }
 
   public async generateTokens(user: User): Promise<IAuthTokens> {
-    const payload = { id: user.id, email: user.email };
+    const payload = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      name: user.name,
+    };
 
     // 1. Access Token (15m)
     const accessToken = jwt.sign(payload, env.JWT_ACCESS_SECRET, {
@@ -83,6 +88,7 @@ export class AuthService {
       email: dto.email.toLowerCase(),
       name: dto.name || dto.email.split('@')[0],
       passwordHash,
+      role: (dto.role as User['role']) || 'SALES_REP',
       isActive: true,
     });
 
@@ -123,6 +129,8 @@ export class AuthService {
       const decoded = jwt.verify(token, env.JWT_REFRESH_SECRET) as {
         id: string;
         email: string;
+        role?: string;
+        name?: string;
       };
 
       // 2. Check persistence and expiration in database
@@ -142,9 +150,14 @@ export class AuthService {
         throw new AppError('User not found or account disabled', 401);
       }
 
-      // 4. Issue new access token
+      // 4. Issue new access token with complete payload
       const accessToken = jwt.sign(
-        { id: user.id, email: user.email },
+        {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          name: user.name,
+        },
         env.JWT_ACCESS_SECRET,
         {
           expiresIn: env.JWT_ACCESS_EXPIRES_IN as jwt.SignOptions['expiresIn'],

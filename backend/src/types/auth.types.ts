@@ -8,8 +8,8 @@ import { Role } from './enums.types';
 export interface IAuthUser {
   id: string;
   email: string;
-  role?: Role;
-  name?: string;
+  role: Role;
+  name: string;
 }
 
 export interface IUser {

@@ -3,13 +3,14 @@
  * Aligned with Database.md §3 and API.md
  */
 
-export type Role = 'ADMIN' | 'SALES_REP' | 'SALES_MANAGER' | 'FINANCE_OPS';
+export type Role = 'ADMIN' | 'SALES_REP' | 'SALES_MANAGER' | 'FINANCE_OPS' | 'CUSTOMER';
 
 export const Role = {
   ADMIN: 'ADMIN' as Role,
   SALES_REP: 'SALES_REP' as Role,
   SALES_MANAGER: 'SALES_MANAGER' as Role,
   FINANCE_OPS: 'FINANCE_OPS' as Role,
+  CUSTOMER: 'CUSTOMER' as Role,
 };
 
 export type CustomerTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'ENTERPRISE';

@@ -12,6 +12,7 @@ import {
   Building2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { PageAuthGuard } from "@/components/auth/PageAuthGuard";
 
 function PortalShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -34,6 +35,10 @@ function PortalShell({ children }: { children: React.ReactNode }) {
 
   const handleSignOut = () => {
     setProfileOpen(false);
+    localStorage.removeItem("dealorbit_token");
+    localStorage.removeItem("dealorbit_user");
+    document.cookie = "dealorbit_token=; path=/; max-age=0";
+    document.cookie = "dealorbit_role=; path=/; max-age=0";
     toast.info("Signed out of Customer Portal", {
       description: "Returning to DealOrbit login...",
     });
@@ -133,7 +138,12 @@ function PortalShell({ children }: { children: React.ReactNode }) {
 
       {/* 2. Main Portal Canvas */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-8">
-        {children}
+        <PageAuthGuard
+          allowedRoles={["CUSTOMER", "ADMIN"]}
+          pageName="Customer Negotiation Portal"
+        >
+          {children}
+        </PageAuthGuard>
       </main>
 
       {/* 3. Customer Footer */}

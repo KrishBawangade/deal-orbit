@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { adminController } from '../controllers/admin.controller';
 import { subscriptionPlanController } from '../controllers/subscriptionPlan.controller';
 import { validate } from '../middlewares/validate';
+import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { Role } from '../types';
 import {
   updateDiscountCeilingSchema,
   updateApprovalChainSchema,
@@ -18,6 +20,9 @@ import {
 } from '../validations/subscription.validation';
 
 const router = Router();
+
+// Strict Admin RBAC Guard
+router.use(authenticate, authorize(Role.ADMIN));
 
 // ==========================================
 // Discount Ceilings Configuration (API.md §4)

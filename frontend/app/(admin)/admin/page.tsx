@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { RoleProvider, useRole } from "@/context/RoleContext";
+import { PageAuthGuard } from "@/components/auth/PageAuthGuard";
 import {
   Settings,
   Shield,
@@ -26,9 +27,13 @@ function AdminContent() {
       {/* Workspace Navbar */}
       <Navbar variant="workspace" logoHref="/quotations" />
 
-      {/* Admin Canvas */}
+      {/* Admin Canvas with Strict Admin Role Guard */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
-        {/* Breadcrumb & Navigation back */}
+        <PageAuthGuard
+          allowedRoles={["ADMIN"]}
+          pageName="Platform Governance & Admin Suite"
+        >
+          {/* Breadcrumb & Navigation back */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
@@ -196,7 +201,8 @@ function AdminContent() {
             </div>
           </div>
         </div>
-      </main>
+      </PageAuthGuard>
+    </main>
     </div>
   );
 }

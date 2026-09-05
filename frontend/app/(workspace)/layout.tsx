@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import { RoleProvider, useRole } from "@/context/RoleContext";
 import { QuotationsProvider } from "@/context/QuotationsContext";
 import { DealHealthProvider } from "@/context/DealHealthContext";
+import { PageAuthGuard } from "@/components/auth/PageAuthGuard";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -21,7 +22,7 @@ function WorkspaceContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   const getPageTitle = () => {
-    if (pathname.startsWith("/quotations")) return "Active & Draft Quotations";
+    if (pathname.startsWith("/quotations")) return "Quotations Management";
     if (pathname.startsWith("/pipeline")) return "Deal Pipeline Kanban";
     if (pathname.startsWith("/fulfillment")) return "Fulfillment & Warehouse Split";
     if (pathname.startsWith("/dashboard"))
@@ -36,9 +37,14 @@ function WorkspaceContent({ children }: { children: React.ReactNode }) {
       {/* 1. Global Reusable Glassmorphism Navbar for Workspace */}
       <Navbar variant="workspace" />
 
-      {/* 2. Main Workspace Canvas */}
+      {/* 2. Main Workspace Canvas with Dynamic Auth & Role Inspection */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
-        {children}
+        <PageAuthGuard
+          allowedRoles={["SALES_REP", "SALES_MANAGER", "FINANCE_OPS", "ADMIN"]}
+          pageName={getPageTitle()}
+        >
+          {children}
+        </PageAuthGuard>
       </main>
     </div>
   );
