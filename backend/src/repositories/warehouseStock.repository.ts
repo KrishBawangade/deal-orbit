@@ -70,8 +70,8 @@ export class WarehouseStockRepository {
         },
       },
       create: {
-        warehouseId,
-        productId,
+        warehouse: { connect: { id: warehouseId } },
+        product: { connect: { id: productId } },
         onHandQuantity: onHandQuantity ?? 0,
         reservedQuantity: reservedQuantity ?? 0,
         reorderThreshold: reorderThreshold ?? 10,
@@ -95,8 +95,8 @@ export class WarehouseStockRepository {
         },
       },
       create: {
-        warehouseId,
-        productId,
+        warehouse: { connect: { id: warehouseId } },
+        product: { connect: { id: productId } },
         onHandQuantity: Math.max(0, deltaOnHand),
         reservedQuantity: Math.max(0, deltaReserved),
         reorderThreshold: 10,

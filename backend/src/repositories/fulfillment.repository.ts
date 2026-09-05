@@ -183,15 +183,12 @@ export class FulfillmentRepository {
             },
           },
           create: {
-            warehouseId: res.warehouseId,
-            productId: res.productId,
+            warehouse: { connect: { id: res.warehouseId } },
+            product: { connect: { id: res.productId } },
             onHandQuantity: 0,
             reservedQuantity: res.quantity,
           },
           update: {
-            onHandQuantity: {
-              decrement: res.quantity,
-            },
             reservedQuantity: {
               increment: res.quantity,
             },
@@ -293,13 +290,12 @@ export class FulfillmentRepository {
           },
         },
         create: {
-          warehouseId,
-          productId: bo.productId,
+          warehouse: { connect: { id: warehouseId } },
+          product: { connect: { id: bo.productId } },
           onHandQuantity: 0,
           reservedQuantity: quantityDispatched,
         },
         update: {
-          onHandQuantity: { decrement: quantityDispatched },
           reservedQuantity: { increment: quantityDispatched },
         },
       });
