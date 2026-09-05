@@ -24,6 +24,7 @@ import {
   FileText,
   Kanban,
   Boxes,
+  CreditCard,
 } from "lucide-react";
 
 export interface NavItem {
@@ -96,6 +97,7 @@ export default function Navbar({
     roleContext?.currentRole === "FINANCE_OPS"
       ? [
           { label: "Overview", href: "/dashboard" },
+          { label: "Billing & Subscriptions", href: "/billing" },
           { label: "Fulfillment & Split", href: "/fulfillment" },
           { label: "Quotations", href: "/quotations" },
           { label: "Pipeline", href: "/pipeline" },
@@ -103,6 +105,7 @@ export default function Navbar({
       : [
           { label: "Quotations", href: "/quotations" },
           { label: "Pipeline", href: "/pipeline" },
+          { label: "Billing & Subscriptions", href: "/billing" },
           { label: "Fulfillment & Split", href: "/fulfillment" },
           { label: "Customer Portal", href: "/portal/demo-token" },
         ];
@@ -286,6 +289,15 @@ export default function Navbar({
                         </Link>
                       ) : (
                         <>
+                          <Link
+                            href="/billing"
+                            onClick={() => setProfileOpen(false)}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-[var(--card-hover)]/70 hover:text-[var(--text-main)] transition-colors"
+                          >
+                            <CreditCard className="w-4 h-4 text-indigo-500" />
+                            <span>Billing & Subscriptions</span>
+                          </Link>
+
                           <Link
                             href="/fulfillment"
                             onClick={() => setProfileOpen(false)}

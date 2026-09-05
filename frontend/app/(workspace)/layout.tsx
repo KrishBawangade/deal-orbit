@@ -25,6 +25,7 @@ function WorkspaceContent({ children }: { children: React.ReactNode }) {
     if (pathname.startsWith("/quotations")) return "Quotations Management";
     if (pathname.startsWith("/pipeline")) return "Deal Pipeline Kanban";
     if (pathname.startsWith("/fulfillment")) return "Fulfillment & Warehouse Split";
+    if (pathname.startsWith("/billing")) return "Subscription & Billing Management";
     if (pathname.startsWith("/dashboard"))
       return currentRole === "FINANCE_OPS"
         ? "Operations & Fulfillment Workspace"

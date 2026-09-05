@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import Link from "next/link";
 import {
   Warehouse,
   Truck,
@@ -12,6 +13,7 @@ import {
   Sparkles,
   PackageCheck,
   Layers,
+  CreditCard,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -294,10 +296,19 @@ export default function FulfillmentSplitScreen() {
 
           {/* Actions / Simulation Trigger */}
           <div className="flex items-center gap-3">
+            <Link
+              href="/billing"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold text-xs shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer"
+              title="Switch to Billing & Subscriptions Screen"
+            >
+              <CreditCard className="w-4 h-4 text-indigo-200" />
+              <span>Billing &amp; Subscriptions</span>
+            </Link>
+
             <button
               type="button"
               onClick={handleSimulateMidFulfillmentArrival}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold text-xs shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold text-xs shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 cursor-pointer"
               title="Simulate replenishment arrival while order is in fulfillment"
             >
               <Sparkles className="w-4 h-4 text-indigo-200" />
