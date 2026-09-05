@@ -32,11 +32,11 @@ export const ROLE_PERSONAS: Record<Role, ActiveUser> = {
     role: "SALES_MANAGER",
   },
   FINANCE_OPS: {
-    name: "Fiona Finance",
-    roleLabel: "Finance / Ops",
-    email: "fiona.finance@dealorbit.io",
+    name: "Elena Rostova",
+    roleLabel: "Finance / Operations",
+    email: "finance.ops@dealorbit.io",
     badgeClass: "badge-role-finance",
-    avatarText: "FF",
+    avatarText: "ER",
     role: "FINANCE_OPS",
   },
   ADMIN: {
@@ -81,9 +81,32 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
   const [isReloading, setIsReloading] = useState<boolean>(false);
   const router = useRouter();
 
+  // Hydrate role on mount from localStorage if logged in as demo user
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem("dealorbit_user");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.role && ROLE_PERSONAS[parsed.role as Role]) {
+          setRoleState(parsed.role as Role);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const setRole = useCallback((role: Role) => {
     setRoleState(role);
     const persona = ROLE_PERSONAS[role] || ROLE_PERSONAS.SALES_REP;
+    try {
+      localStorage.setItem("dealorbit_user", JSON.stringify({
+        ...persona,
+        role,
+      }));
+    } catch {
+      // ignore
+    }
     toast.info(`Switched persona to ${persona.name} (${persona.roleLabel})`, {
       description: "Permissions and available actions updated dynamically.",
     });

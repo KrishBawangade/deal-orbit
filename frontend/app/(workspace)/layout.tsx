@@ -23,9 +23,12 @@ function WorkspaceContent({ children }: { children: React.ReactNode }) {
   const getPageTitle = () => {
     if (pathname.startsWith("/quotations")) return "Active & Draft Quotations";
     if (pathname.startsWith("/pipeline")) return "Deal Pipeline Kanban";
-    if (pathname.startsWith("/dashboard")) return "Sales Workspace Dashboard";
-    if (pathname.startsWith("/deal-health")) return "Deal Health Radar";
-    return "Sales Operations Workspace";
+    if (pathname.startsWith("/fulfillment")) return "Fulfillment & Warehouse Split";
+    if (pathname.startsWith("/dashboard"))
+      return currentRole === "FINANCE_OPS"
+        ? "Operations & Fulfillment Workspace"
+        : "Sales Workspace Dashboard";
+    return "Operations Workspace";
   };
 
   return (

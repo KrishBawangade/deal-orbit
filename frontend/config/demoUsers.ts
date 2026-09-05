@@ -89,7 +89,7 @@ export const DEMO_USERS: IDemoUser[] = [
       "ERP invoice & billing synchronization",
       "Revenue recognition auditing",
     ],
-    defaultPath: "/billing",
+    defaultPath: "/dashboard",
   },
   {
     id: "demo-user-customer",
