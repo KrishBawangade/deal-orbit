@@ -96,19 +96,19 @@ export default function Navbar({
   const dynamicWorkspaceLinks: NavItem[] =
     roleContext?.currentRole === "FINANCE_OPS"
       ? [
-          { label: "Overview", href: "/dashboard" },
-          { label: "Billing & Subscriptions", href: "/billing" },
-          { label: "Fulfillment & Split", href: "/fulfillment" },
-          { label: "Quotations", href: "/quotations" },
-          { label: "Pipeline", href: "/pipeline" },
-        ]
+        { label: "Overview", href: "/dashboard" },
+        { label: "Billing & Subscriptions", href: "/billing" },
+        { label: "Fulfillment & Split", href: "/fulfillment" },
+        { label: "Quotations", href: "/quotations" },
+        { label: "Pipeline", href: "/pipeline" },
+      ]
       : [
-          { label: "Quotations", href: "/quotations" },
-          { label: "Pipeline", href: "/pipeline" },
-          { label: "Billing & Subscriptions", href: "/billing" },
-          { label: "Fulfillment & Split", href: "/fulfillment" },
-          { label: "Customer Portal", href: "/portal/demo-token" },
-        ];
+        { label: "Quotations", href: "/quotations" },
+        { label: "Pipeline", href: "/pipeline" },
+        { label: "Billing & Subscriptions", href: "/billing" },
+        { label: "Fulfillment & Split", href: "/fulfillment" },
+        { label: "Customer Portal", href: "/portal/demo-token" },
+      ];
 
   const activeLinks =
     links ||
@@ -126,8 +126,8 @@ export default function Navbar({
     (activeRole === "CUSTOMER"
       ? "/portal/demo-token"
       : variant === "workspace"
-      ? roleHomePath || "/quotations"
-      : "/");
+        ? roleHomePath || "/quotations"
+        : "/");
 
   // Fallback user info if not inside RoleProvider
   const user = roleContext?.activeUser || {
@@ -173,11 +173,10 @@ export default function Navbar({
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`relative px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                      isActive
+                    className={`relative px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${isActive
                         ? "bg-[var(--primary)]/10 text-[var(--primary)] font-semibold border border-[var(--primary)]/25 shadow-2xs backdrop-blur-xs"
                         : "text-[var(--text-body)] hover:text-[var(--text-main)] hover:bg-[var(--card)]/60 hover:backdrop-blur-xs"
-                    }`}
+                      }`}
                   >
                     <span>{link.label}</span>
                     {link.badge && (
@@ -209,11 +208,10 @@ export default function Navbar({
                 aria-label="Reload Data"
               >
                 <RefreshCw
-                  className={`w-3.5 h-3.5 ${
-                    roleContext?.isReloading
+                  className={`w-3.5 h-3.5 ${roleContext?.isReloading
                       ? "animate-spin text-[var(--primary)]"
                       : "text-[var(--text-muted)]"
-                  }`}
+                    }`}
                 />
                 <span className="hidden sm:inline">
                   {roleContext?.isReloading ? "Reloading..." : "Reload Data"}
@@ -341,11 +339,10 @@ export default function Navbar({
                             roleContext?.setRole("SALES_REP");
                             setProfileOpen(false);
                           }}
-                          className={`px-2 py-1.5 rounded-md text-left flex items-center gap-1.5 cursor-pointer transition-colors ${
-                            roleContext?.currentRole === "SALES_REP"
+                          className={`px-2 py-1.5 rounded-md text-left flex items-center gap-1.5 cursor-pointer transition-colors ${roleContext?.currentRole === "SALES_REP"
                               ? "bg-[var(--primary)]/15 font-bold text-[var(--primary)]"
                               : "hover:bg-[var(--card-hover)] text-[var(--text-body)]"
-                          }`}
+                            }`}
                         >
                           <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
                           <span className="truncate">Sales Rep</span>
@@ -356,11 +353,10 @@ export default function Navbar({
                             roleContext?.setRole("FINANCE_OPS");
                             setProfileOpen(false);
                           }}
-                          className={`px-2 py-1.5 rounded-md text-left flex items-center gap-1.5 cursor-pointer transition-colors ${
-                            roleContext?.currentRole === "FINANCE_OPS"
+                          className={`px-2 py-1.5 rounded-md text-left flex items-center gap-1.5 cursor-pointer transition-colors ${roleContext?.currentRole === "FINANCE_OPS"
                               ? "bg-emerald-500/15 font-bold text-emerald-600 dark:text-emerald-400"
                               : "hover:bg-[var(--card-hover)] text-[var(--text-body)]"
-                          }`}
+                            }`}
                         >
                           <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                           <span className="truncate">Finance/Ops</span>
@@ -434,11 +430,10 @@ export default function Navbar({
                 key={link.href}
                 href={link.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium ${
-                  isActive
+                className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium ${isActive
                     ? "bg-[var(--primary)]/10 text-[var(--primary)] font-semibold border border-[var(--primary)]/20"
                     : "text-[var(--text-body)] hover:bg-[var(--card)]/60"
-                }`}
+                  }`}
               >
                 <span>{link.label}</span>
                 {link.badge && (
