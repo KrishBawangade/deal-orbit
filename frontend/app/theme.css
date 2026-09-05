@@ -78,6 +78,8 @@
   --card-hover: #f1f5f9;          /* Interactive card hover */
   --card-glass: rgba(255, 255, 255, 0.85);
   --card-glass-border: rgba(226, 232, 240, 0.85);
+  --surface: #f8fafc;             /* Subtle recessed surface / canvas */
+  --surface-raised: #ffffff;      /* Clean crisp white card container */
 
   --border: #e2e8f0;              /* Card & container borders */
   --border-subtle: #f1f5f9;       /* Subtle dividers */

@@ -1,8 +1,27 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import type { CustomerTier, QuoteStatus, ICustomerNegotiationMessage } from "@/types";
+import type { CustomerTier, QuoteStatus, ICustomerNegotiationMessage, Role } from "@/types";
 import { siteConfig } from "@/config/site";
+
+export type ApprovalActionType =
+  | "SUBMITTED"
+  | "APPROVED_TIER_1"
+  | "APPROVED_FINAL"
+  | "REJECTED"
+  | "RETURNED_FOR_REVISION"
+  | "REVOKED_BY_MUTATION"
+  | "DIGITALLY_CONFIRMED";
+
+export interface QuotationAuditEntry {
+  id: string;
+  action: ApprovalActionType;
+  actorName: string;
+  actorRole: Role;
+  timestamp: string;
+  notes: string;
+  metadata?: Record<string, unknown>;
+}
 
 export interface QuotationLineItem {
   id: string;
@@ -42,6 +61,7 @@ export interface QuotationRecord {
   riskScore: number;
   status: QuoteStatus;
   approvalRequirement: "NONE" | "MANAGER_REQUIRED" | "FINANCE_REQUIRED" | "DUAL_REQUIRED";
+  approvalStage?: "SALES_MANAGER" | "FINANCE" | "COMPLETED" | "REJECTED" | "RETURNED";
   repName: string;
   updatedAt: string;
   lines: QuotationLineItem[];
@@ -55,6 +75,7 @@ export interface QuotationRecord {
   confirmedAt?: string;
   reApprovalRequired?: boolean;
   reApprovalReason?: string;
+  auditTrail?: QuotationAuditEntry[];
 }
 
 const INITIAL_QUOTATIONS: QuotationRecord[] = [
@@ -75,13 +96,24 @@ const INITIAL_QUOTATIONS: QuotationRecord[] = [
     blendedMargin: 18.4,
     marginStatus: "MEDIUM",
     riskScore: 38.5,
-    status: "CUSTOMER_REVIEW",
+    status: "IN_REVIEW",
     approvalRequirement: "MANAGER_REQUIRED",
+    approvalStage: "SALES_MANAGER",
     repName: "Sam Seller",
     updatedAt: "10 mins ago",
     paymentTerms: "Net 30",
     portalToken: "demo-token",
     expiresAt: "2026-09-19",
+    auditTrail: [
+      {
+        id: "audit-043-01",
+        action: "SUBMITTED",
+        actorName: "Sam Seller",
+        actorRole: "SALES_REP",
+        timestamp: "Today at 09:00",
+        notes: "Quotation configured with 18% discount on on-site deployment to secure enterprise migration. Submitted for B4 managerial sign-off.",
+      },
+    ],
     negotiationMessages: [
       {
         id: "msg-01",
@@ -136,6 +168,225 @@ const INITIAL_QUOTATIONS: QuotationRecord[] = [
         violationPoints: 8.0,
         netLineTotal: 98400,
         lineMarginPercent: -1.6,
+        isRecurring: false,
+        billingFrequency: "ONE_TIME",
+      },
+    ],
+  },
+  {
+    id: "QT-2026-0046",
+    customerName: "Cyberdyne Systems",
+    customerId: "cust-004",
+    tier: "ENTERPRISE",
+    tierCeiling: 20,
+    lineItemsCount: 2,
+    subtotal: "₹46,50,000",
+    subtotalAmount: 4650000,
+    discountAmount: 1180000,
+    orderDiscountPercent: 0,
+    taxAmount: 624600,
+    total: "₹40,94,600",
+    totalAmount: 4094600,
+    blendedMargin: 15.2,
+    marginStatus: "DANGER",
+    riskScore: 58.2,
+    status: "IN_REVIEW",
+    approvalRequirement: "DUAL_REQUIRED",
+    approvalStage: "SALES_MANAGER",
+    repName: "Sam Seller",
+    updatedAt: "25 mins ago",
+    paymentTerms: "Net 60",
+    portalToken: "cyberdyne-token",
+    expiresAt: "2026-09-25",
+    auditTrail: [
+      {
+        id: "audit-046-01",
+        action: "SUBMITTED",
+        actorName: "Sam Seller",
+        actorRole: "SALES_REP",
+        timestamp: "Today at 11:20",
+        notes: "High-value competitive bid against AWS & Dell. Aggressive discounting applied to secure multi-year infrastructure lock-in. Risk score exceeds 50 and margin is below 18%; triggers Two-Tier sequential approval (Sales Manager + Finance Director).",
+      },
+    ],
+    lines: [
+      {
+        id: "line-46-01",
+        productId: "prod-hw-04",
+        sku: "HW-GPU-HGX",
+        name: "Enterprise GPU Compute Node (8x H100 SXM5 / 640GB)",
+        category: "HARDWARE",
+        quantity: 4,
+        unitPrice: 850000,
+        unitCost: 710000,
+        discountPercent: 22.0,
+        effectiveCeiling: 20.0,
+        isViolation: true,
+        violationPoints: 2.0,
+        netLineTotal: 2652000,
+        lineMarginPercent: 16.4,
+        isRecurring: false,
+        billingFrequency: "ONE_TIME",
+      },
+      {
+        id: "line-46-02",
+        productId: "prod-srv-02",
+        sku: "SRV-AI-DEPL",
+        name: "Custom AI Cluster Architecture & On-Site Turnkey Commissioning",
+        category: "SERVICES",
+        quantity: 1,
+        unitPrice: 1250000,
+        unitCost: 880000,
+        discountPercent: 28.0,
+        effectiveCeiling: 10.0,
+        isViolation: true,
+        violationPoints: 18.0,
+        netLineTotal: 900000,
+        lineMarginPercent: 2.2,
+        isRecurring: false,
+        billingFrequency: "ONE_TIME",
+      },
+    ],
+  },
+  {
+    id: "QT-2026-0042",
+    customerName: "Nexus Healthcare",
+    customerId: "cust-005",
+    tier: "GOLD",
+    tierCeiling: 15,
+    lineItemsCount: 2,
+    subtotal: "₹24,00,000",
+    subtotalAmount: 2400000,
+    discountAmount: 240000,
+    orderDiscountPercent: 0,
+    taxAmount: 388800,
+    total: "₹25,48,800",
+    totalAmount: 2548800,
+    blendedMargin: 21.0,
+    marginStatus: "MEDIUM",
+    riskScore: 34.0,
+    status: "APPROVED",
+    approvalRequirement: "MANAGER_REQUIRED",
+    approvalStage: "COMPLETED",
+    repName: "Sam Seller",
+    updatedAt: "Yesterday",
+    paymentTerms: "Net 30",
+    portalToken: "nexus-token",
+    expiresAt: "2026-09-30",
+    auditTrail: [
+      {
+        id: "audit-042-02",
+        action: "APPROVED_FINAL",
+        actorName: "Morgan Manager",
+        actorRole: "SALES_MANAGER",
+        timestamp: "Yesterday at 15:45",
+        notes: "Strategic tier-1 hospital network expansion approved. Services margin compensated by 3-year recurring maintenance contract.",
+      },
+      {
+        id: "audit-042-01",
+        action: "SUBMITTED",
+        actorName: "Sam Seller",
+        actorRole: "SALES_REP",
+        timestamp: "Yesterday at 11:30",
+        notes: "Initial submission with 14% discount on health tech workstations.",
+      },
+    ],
+    lines: [
+      {
+        id: "line-42-01",
+        productId: "prod-hw-05",
+        sku: "HW-MED-WKSTN",
+        name: "Medical Diagnostic High-Res Workstation",
+        category: "HARDWARE",
+        quantity: 10,
+        unitPrice: 190000,
+        unitCost: 145000,
+        discountPercent: 10.0,
+        effectiveCeiling: 15.0,
+        isViolation: false,
+        violationPoints: 0,
+        netLineTotal: 1710000,
+        lineMarginPercent: 23.6,
+        isRecurring: false,
+        billingFrequency: "ONE_TIME",
+      },
+      {
+        id: "line-42-02",
+        productId: "prod-srv-03",
+        sku: "SRV-MED-HIPAA",
+        name: "HIPAA Compliance & Secure Network Integration Service",
+        category: "SERVICES",
+        quantity: 1,
+        unitPrice: 500000,
+        unitCost: 360000,
+        discountPercent: 14.0,
+        effectiveCeiling: 10.0,
+        isViolation: true,
+        violationPoints: 4.0,
+        netLineTotal: 430000,
+        lineMarginPercent: 16.3,
+        isRecurring: false,
+        billingFrequency: "ONE_TIME",
+      },
+    ],
+  },
+  {
+    id: "QT-2026-0041",
+    customerName: "OmniCorp Industries",
+    customerId: "cust-006",
+    tier: "SILVER",
+    tierCeiling: 10,
+    lineItemsCount: 1,
+    subtotal: "₹12,50,000",
+    subtotalAmount: 1250000,
+    discountAmount: 250000,
+    orderDiscountPercent: 0,
+    taxAmount: 180000,
+    total: "₹11,80,000",
+    totalAmount: 1180000,
+    blendedMargin: 14.5,
+    marginStatus: "DANGER",
+    riskScore: 62.0,
+    status: "DRAFT",
+    approvalRequirement: "DUAL_REQUIRED",
+    approvalStage: "RETURNED",
+    repName: "Sam Seller",
+    updatedAt: "2 days ago",
+    paymentTerms: "Net 30",
+    reApprovalReason: "20% discount on Silver tier breaches margin threshold (<15%). Rep must bundle with 2-year Care Pack or reduce discount to 10% maximum.",
+    auditTrail: [
+      {
+        id: "audit-041-02",
+        action: "RETURNED_FOR_REVISION",
+        actorName: "Morgan Manager",
+        actorRole: "SALES_MANAGER",
+        timestamp: "2 days ago at 17:10",
+        notes: "20% discount on Silver tier breaches margin threshold (<15%). Rep must bundle with 2-year Care Pack or reduce discount to 10% maximum.",
+      },
+      {
+        id: "audit-041-01",
+        action: "SUBMITTED",
+        actorName: "Sam Seller",
+        actorRole: "SALES_REP",
+        timestamp: "2 days ago at 14:00",
+        notes: "Initial quotation submitted for review.",
+      },
+    ],
+    lines: [
+      {
+        id: "line-41-01",
+        productId: "prod-hw-06",
+        sku: "HW-EDGE-ROUTER",
+        name: "Enterprise Core Edge Gateway Router",
+        category: "HARDWARE",
+        quantity: 5,
+        unitPrice: 250000,
+        unitCost: 195000,
+        discountPercent: 20.0,
+        effectiveCeiling: 10.0,
+        isViolation: true,
+        violationPoints: 10.0,
+        netLineTotal: 1000000,
+        lineMarginPercent: 14.5,
         isRecurring: false,
         billingFrequency: "ONE_TIME",
       },
@@ -282,11 +533,40 @@ interface QuotationsContextType {
     salesOrderNumber?: string;
     reApprovalReason?: string;
   };
+  approveQuotation: (
+    quoteId: string,
+    reviewerName: string,
+    reviewerRole: Role,
+    notes?: string
+  ) => {
+    nextStatus: QuoteStatus;
+    nextStage: "SALES_MANAGER" | "FINANCE" | "COMPLETED" | "REJECTED" | "RETURNED";
+    isFinal: boolean;
+    auditEntry: QuotationAuditEntry;
+  };
+  rejectQuotation: (
+    quoteId: string,
+    reviewerName: string,
+    reviewerRole: Role,
+    reason: string
+  ) => {
+    nextStatus: QuoteStatus;
+    auditEntry: QuotationAuditEntry;
+  };
+  returnQuotationForRevision: (
+    quoteId: string,
+    reviewerName: string,
+    reviewerRole: Role,
+    feedback: string
+  ) => {
+    nextStatus: QuoteStatus;
+    auditEntry: QuotationAuditEntry;
+  };
 }
 
 const QuotationsContext = createContext<QuotationsContextType | null>(null);
 
-const STORAGE_KEY = "dealorbit_quotations_data";
+const STORAGE_KEY = "dealorbit_quotations_data_v3";
 
 export function QuotationsProvider({ children }: { children: React.ReactNode }) {
   const [quotations, setQuotations] = useState<QuotationRecord[]>(INITIAL_QUOTATIONS);
@@ -633,6 +913,157 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
     [quotations]
   );
 
+  const approveQuotation = useCallback(
+    (
+      quoteId: string,
+      reviewerName: string,
+      reviewerRole: Role,
+      notes: string = ""
+    ) => {
+      const currentQuote = quotations.find((q) => q.id.toLowerCase() === quoteId.toLowerCase());
+      if (!currentQuote) throw new Error(`Quotation ${quoteId} not found`);
+
+      const isDualRequired =
+        currentQuote.approvalRequirement === "DUAL_REQUIRED" ||
+        currentQuote.riskScore > 50 ||
+        currentQuote.blendedMargin < 18;
+
+      const currentStage = currentQuote.approvalStage || "SALES_MANAGER";
+
+      let nextStatus: QuoteStatus = currentQuote.status;
+      let nextStage: "SALES_MANAGER" | "FINANCE" | "COMPLETED" | "REJECTED" | "RETURNED" = currentStage;
+      let actionType: ApprovalActionType = "APPROVED_FINAL";
+      let isFinal = false;
+
+      // If dual approval required and Sales Manager is acting, advance to Finance
+      if (isDualRequired && currentStage === "SALES_MANAGER" && reviewerRole !== "FINANCE_OPS") {
+        nextStage = "FINANCE";
+        nextStatus = "IN_REVIEW";
+        actionType = "APPROVED_TIER_1";
+        isFinal = false;
+      } else {
+        // Either single manager approval required, or Finance is approving, or Admin override
+        nextStage = "COMPLETED";
+        nextStatus = "APPROVED";
+        actionType = "APPROVED_FINAL";
+        isFinal = true;
+      }
+
+      const defaultNotes = isFinal
+        ? "Commercial and discount terms approved for restricted customer publishing."
+        : "Tier-1 managerial sign-off completed. Escalated to Finance Director for high-risk / margin leakage review.";
+
+      const auditEntry: QuotationAuditEntry = {
+        id: `audit-${Date.now()}`,
+        action: actionType,
+        actorName: reviewerName || "Morgan Manager",
+        actorRole: reviewerRole || "SALES_MANAGER",
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + ", Today",
+        notes: notes.trim() || defaultNotes,
+        metadata: {
+          riskScore: currentQuote.riskScore,
+          blendedMargin: currentQuote.blendedMargin,
+          stage: nextStage,
+        },
+      };
+
+      setQuotations((prev) =>
+        prev.map((q) => {
+          if (q.id.toLowerCase() !== quoteId.toLowerCase()) return q;
+          return {
+            ...q,
+            status: nextStatus,
+            approvalStage: nextStage,
+            reApprovalRequired: false,
+            reApprovalReason: undefined,
+            updatedAt: "Just now",
+            auditTrail: [auditEntry, ...(q.auditTrail || [])],
+          };
+        })
+      );
+
+      return { nextStatus, nextStage, isFinal, auditEntry };
+    },
+    [quotations]
+  );
+
+  const rejectQuotation = useCallback(
+    (
+      quoteId: string,
+      reviewerName: string,
+      reviewerRole: Role,
+      reason: string
+    ) => {
+      const currentQuote = quotations.find((q) => q.id.toLowerCase() === quoteId.toLowerCase());
+      const auditEntry: QuotationAuditEntry = {
+        id: `audit-${Date.now()}`,
+        action: "REJECTED",
+        actorName: reviewerName || "Reviewer",
+        actorRole: reviewerRole,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + ", Today",
+        notes: reason.trim() || "Discount configuration rejected by governance board.",
+        metadata: {
+          previousStatus: currentQuote?.status,
+        },
+      };
+
+      setQuotations((prev) =>
+        prev.map((q) => {
+          if (q.id.toLowerCase() !== quoteId.toLowerCase()) return q;
+          return {
+            ...q,
+            status: "REJECTED" as QuoteStatus,
+            approvalStage: "REJECTED",
+            updatedAt: "Just now",
+            auditTrail: [auditEntry, ...(q.auditTrail || [])],
+          };
+        })
+      );
+
+      return { nextStatus: "REJECTED" as QuoteStatus, auditEntry };
+    },
+    [quotations]
+  );
+
+  const returnQuotationForRevision = useCallback(
+    (
+      quoteId: string,
+      reviewerName: string,
+      reviewerRole: Role,
+      feedback: string
+    ) => {
+      const currentQuote = quotations.find((q) => q.id.toLowerCase() === quoteId.toLowerCase());
+      const auditEntry: QuotationAuditEntry = {
+        id: `audit-${Date.now()}`,
+        action: "RETURNED_FOR_REVISION",
+        actorName: reviewerName || "Reviewer",
+        actorRole: reviewerRole,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + ", Today",
+        notes: feedback.trim(),
+        metadata: {
+          previousStatus: currentQuote?.status,
+        },
+      };
+
+      setQuotations((prev) =>
+        prev.map((q) => {
+          if (q.id.toLowerCase() !== quoteId.toLowerCase()) return q;
+          return {
+            ...q,
+            status: "DRAFT" as QuoteStatus,
+            approvalStage: "RETURNED",
+            reApprovalReason: feedback.trim(),
+            updatedAt: "Just now",
+            auditTrail: [auditEntry, ...(q.auditTrail || [])],
+          };
+        })
+      );
+
+      return { nextStatus: "DRAFT" as QuoteStatus, auditEntry };
+    },
+    [quotations]
+  );
+
   return (
     <QuotationsContext.Provider
       value={{
@@ -648,6 +1079,9 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
         submitCounterOffer,
         addLineComment,
         confirmQuotation,
+        approveQuotation,
+        rejectQuotation,
+        returnQuotationForRevision,
       }}
     >
       {children}
