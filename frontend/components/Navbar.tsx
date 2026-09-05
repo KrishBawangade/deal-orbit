@@ -62,6 +62,7 @@ const DEFAULT_LANDING_LINKS: NavItem[] = [
 const DEFAULT_WORKSPACE_LINKS: NavItem[] = [
   { label: "Quotations", href: "/quotations" },
   { label: "Pipeline", href: "/pipeline" },
+  { label: "Customer Portal", href: "/portal/demo-token" },
 ];
 
 /**

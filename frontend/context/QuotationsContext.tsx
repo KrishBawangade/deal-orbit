@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import type { CustomerTier, QuoteStatus } from "@/types";
+import type { CustomerTier, QuoteStatus, ICustomerNegotiationMessage } from "@/types";
 
 export interface QuotationLineItem {
   id: string;
@@ -45,6 +45,15 @@ export interface QuotationRecord {
   updatedAt: string;
   lines: QuotationLineItem[];
   paymentTerms: string;
+  portalToken?: string;
+  expiresAt?: string;
+  negotiationMessages?: ICustomerNegotiationMessage[];
+  salesOrderNumber?: string;
+  signerName?: string;
+  signerTitle?: string;
+  confirmedAt?: string;
+  reApprovalRequired?: boolean;
+  reApprovalReason?: string;
 }
 
 const INITIAL_QUOTATIONS: QuotationRecord[] = [
@@ -65,11 +74,33 @@ const INITIAL_QUOTATIONS: QuotationRecord[] = [
     blendedMargin: 18.4,
     marginStatus: "MEDIUM",
     riskScore: 38.5,
-    status: "IN_REVIEW",
+    status: "CUSTOMER_REVIEW",
     approvalRequirement: "MANAGER_REQUIRED",
     repName: "Sam Seller",
     updatedAt: "10 mins ago",
     paymentTerms: "Net 30",
+    portalToken: "demo-token",
+    expiresAt: "2026-09-19",
+    negotiationMessages: [
+      {
+        id: "msg-01",
+        quotationId: "QT-2026-0043",
+        lineItemId: "line-01",
+        authorRole: "CUSTOMER",
+        authorName: "Jordan Procurement (Acme Corp)",
+        message: "Can delivery timeline be accelerated to 48 hours for the first 10 laptop units?",
+        createdAt: "Yesterday at 16:30",
+      },
+      {
+        id: "msg-02",
+        quotationId: "QT-2026-0043",
+        lineItemId: "line-01",
+        authorRole: "SALES_REP",
+        authorName: "Sam Seller (DealOrbit Rep)",
+        message: "Yes! Inventory is pre-staged across regional hubs. We can dispatch 10 units within 24 hours of confirmation.",
+        createdAt: "Today at 09:15",
+      },
+    ],
     lines: [
       {
         id: "line-01",
@@ -220,7 +251,33 @@ interface QuotationsContextType {
   addQuotation: (quote: QuotationRecord) => void;
   updateQuotation: (quote: QuotationRecord) => void;
   getQuotation: (id: string) => QuotationRecord | undefined;
+  getQuotationByToken: (token: string) => QuotationRecord | undefined;
   getNextQuoteId: () => string;
+  submitCounterOffer: (
+    quoteId: string,
+    lineItemId: string,
+    proposedDiscount: number,
+    proposedQuantity?: number,
+    message?: string
+  ) => { reApprovalRequired: boolean; quoteNumber: string };
+  addLineComment: (
+    quoteId: string,
+    lineItemId: string | null,
+    message: string,
+    authorRole?: "CUSTOMER" | "SALES_REP",
+    authorName?: string
+  ) => void;
+  confirmQuotation: (
+    quoteId: string,
+    signerName: string,
+    signerTitle: string,
+    acceptanceNotes?: string
+  ) => {
+    status: QuoteStatus;
+    routeType: "FULFILLMENT" | "RE_APPROVAL";
+    salesOrderNumber?: string;
+    reApprovalReason?: string;
+  };
 }
 
 const QuotationsContext = createContext<QuotationsContextType | null>(null);
@@ -265,6 +322,29 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
     [quotations]
   );
 
+  const getQuotationByToken = useCallback(
+    (token: string) => {
+      const trimmed = token.trim().toLowerCase();
+      // First check direct portalToken match
+      const byPortalToken = quotations.find(
+        (q) => q.portalToken?.toLowerCase() === trimmed
+      );
+      if (byPortalToken) return byPortalToken;
+
+      // Second check quote ID
+      const byId = quotations.find((q) => q.id.toLowerCase() === trimmed);
+      if (byId) return byId;
+
+      // Third fallback: If demo-token or demo, return QT-2026-0043 or first quote
+      if (trimmed.includes("demo") || trimmed === "default") {
+        return quotations.find((q) => q.id === "QT-2026-0043") || quotations[0];
+      }
+
+      return quotations[0];
+    },
+    [quotations]
+  );
+
   const getNextQuoteId = useCallback(() => {
     const existingNums = quotations
       .map((q) => {
@@ -276,6 +356,228 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
     return `QT-2026-${String(maxNum + 1).padStart(4, "0")}`;
   }, [quotations]);
 
+  const submitCounterOffer = useCallback(
+    (
+      quoteId: string,
+      lineItemId: string,
+      proposedDiscount: number,
+      proposedQuantity?: number,
+      message?: string
+    ) => {
+      let reApprovalRequired = false;
+      let quoteNumber = quoteId;
+
+      setQuotations((prev) =>
+        prev.map((quote) => {
+          if (quote.id.toLowerCase() !== quoteId.toLowerCase()) return quote;
+          quoteNumber = quote.id;
+
+          const updatedLines = quote.lines.map((line) => {
+            if (line.id !== lineItemId) return line;
+
+            const newQty = proposedQuantity && proposedQuantity > 0 ? proposedQuantity : line.quantity;
+            const newDiscount = Math.max(0, Math.min(100, proposedDiscount));
+            const isBreach = newDiscount > line.effectiveCeiling;
+            if (isBreach) reApprovalRequired = true;
+
+            const netPerUnit = line.unitPrice * (1 - newDiscount / 100);
+            const netLineTotal = netPerUnit * newQty;
+            const lineMargin = ((netPerUnit - line.unitCost) / netPerUnit) * 100;
+
+            return {
+              ...line,
+              quantity: newQty,
+              discountPercent: newDiscount,
+              isViolation: isBreach,
+              violationPoints: Math.max(0, newDiscount - line.effectiveCeiling),
+              netLineTotal,
+              lineMarginPercent: parseFloat(lineMargin.toFixed(1)),
+            };
+          });
+
+          // Recalculate totals
+          const subtotalAmount = updatedLines.reduce(
+            (acc, l) => acc + l.unitPrice * l.quantity,
+            0
+          );
+          const totalLineNet = updatedLines.reduce((acc, l) => acc + l.netLineTotal, 0);
+          const totalCost = updatedLines.reduce(
+            (acc, l) => acc + l.unitCost * l.quantity,
+            0
+          );
+          const discountAmount = subtotalAmount - totalLineNet;
+          const taxAmount = Math.round(totalLineNet * 0.18);
+          const totalAmount = totalLineNet + taxAmount;
+          const blendedMargin =
+            totalLineNet > 0
+              ? parseFloat((((totalLineNet - totalCost) / totalLineNet) * 100).toFixed(1))
+              : 0;
+
+          // Check any line violation
+          const anyViolation = updatedLines.some((l) => l.isViolation);
+          if (anyViolation) reApprovalRequired = true;
+
+          // Append negotiation message
+          const targetLine = quote.lines.find((l) => l.id === lineItemId);
+          const newMessage: ICustomerNegotiationMessage = {
+            id: `msg-${Date.now()}`,
+            quotationId: quote.id,
+            lineItemId,
+            authorRole: "CUSTOMER",
+            authorName: "Jordan Procurement (Acme Corp)",
+            message:
+              message ||
+              `Proposed counter-offer: ${proposedDiscount}% discount on ${
+                targetLine?.name || "line item"
+              }.`,
+            proposedDiscount,
+            proposedQuantity: proposedQuantity || undefined,
+            createdAt: "Just now",
+          };
+
+          return {
+            ...quote,
+            status: "NEGOTIATING" as QuoteStatus,
+            lines: updatedLines,
+            subtotalAmount,
+            subtotal: `₹${subtotalAmount.toLocaleString("en-IN")}`,
+            discountAmount,
+            taxAmount,
+            totalAmount,
+            total: `₹${totalAmount.toLocaleString("en-IN")}`,
+            blendedMargin,
+            reApprovalRequired,
+            reApprovalReason: reApprovalRequired
+              ? `Counter discount (${proposedDiscount}%) exceeds category threshold (${
+                  targetLine?.effectiveCeiling || 15
+                }%). Requires managerial re-approval.`
+              : undefined,
+            negotiationMessages: [...(quote.negotiationMessages || []), newMessage],
+            updatedAt: "Just now",
+          };
+        })
+      );
+
+      return { reApprovalRequired, quoteNumber };
+    },
+    []
+  );
+
+  const addLineComment = useCallback(
+    (
+      quoteId: string,
+      lineItemId: string | null,
+      message: string,
+      authorRole: "CUSTOMER" | "SALES_REP" = "CUSTOMER",
+      authorName: string = "Jordan Procurement (Acme Corp)"
+    ) => {
+      setQuotations((prev) =>
+        prev.map((quote) => {
+          if (quote.id.toLowerCase() !== quoteId.toLowerCase()) return quote;
+
+          const newMessage: ICustomerNegotiationMessage = {
+            id: `msg-${Date.now()}`,
+            quotationId: quote.id,
+            lineItemId: lineItemId || undefined,
+            authorRole,
+            authorName,
+            message,
+            createdAt: "Just now",
+          };
+
+          return {
+            ...quote,
+            status: quote.status === "CUSTOMER_REVIEW" ? "NEGOTIATING" : quote.status,
+            negotiationMessages: [...(quote.negotiationMessages || []), newMessage],
+            updatedAt: "Just now",
+          };
+        })
+      );
+    },
+    []
+  );
+
+  const confirmQuotation = useCallback(
+    (
+      quoteId: string,
+      signerName: string,
+      signerTitle: string,
+      acceptanceNotes?: string
+    ) => {
+      const currentQuote = quotations.find((q) => q.id.toLowerCase() === quoteId.toLowerCase());
+      const hasBreach =
+        Boolean(currentQuote?.reApprovalRequired) ||
+        Boolean(currentQuote?.lines.some((l) => l.isViolation || l.discountPercent > l.effectiveCeiling));
+
+      const routeType: "FULFILLMENT" | "RE_APPROVAL" = hasBreach ? "RE_APPROVAL" : "FULFILLMENT";
+      const resultStatus: QuoteStatus = hasBreach ? "IN_REVIEW" : "ACCEPTED";
+      const numPart = (currentQuote?.id || quoteId).replace(/[^0-9]/g, "").slice(-4) || "0043";
+      const salesOrderNumber = routeType === "FULFILLMENT" ? `SO-2026-${numPart}` : undefined;
+      const reApprovalReason =
+        routeType === "RE_APPROVAL"
+          ? currentQuote?.reApprovalReason ||
+            "One or more line discounts exceed approved discount ceilings. Re-routed to Morgan Manager for B4 Governance Review."
+          : undefined;
+
+      setQuotations((prev) =>
+        prev.map((quote) => {
+          if (quote.id.toLowerCase() !== quoteId.toLowerCase()) return quote;
+
+          if (routeType === "RE_APPROVAL") {
+            const auditMsg: ICustomerNegotiationMessage = {
+              id: `msg-${Date.now()}`,
+              quotationId: quote.id,
+              authorRole: "CUSTOMER",
+              authorName: signerName || "Customer Signer",
+              message: `Procurement attempted digital confirmation. Because terms exceed discount ceilings, quotation was automatically re-routed to Manager Morgan Manager for B4 re-approval.`,
+              createdAt: "Just now",
+            };
+
+            return {
+              ...quote,
+              status: "IN_REVIEW" as QuoteStatus,
+              approvalRequirement: "MANAGER_REQUIRED",
+              reApprovalRequired: true,
+              reApprovalReason,
+              signerName,
+              signerTitle,
+              negotiationMessages: [...(quote.negotiationMessages || []), auditMsg],
+              updatedAt: "Just now",
+            };
+          } else {
+            const auditMsg: ICustomerNegotiationMessage = {
+              id: `msg-${Date.now()}`,
+              quotationId: quote.id,
+              authorRole: "CUSTOMER",
+              authorName: signerName || "Customer Signer",
+              message: `Quotation digitally accepted & confirmed by ${signerName} (${signerTitle}). Sales Order ${salesOrderNumber} generated. Order moved directly to multi-warehouse fulfillment.`,
+              createdAt: "Just now",
+            };
+
+            return {
+              ...quote,
+              status: "ACCEPTED" as QuoteStatus,
+              salesOrderNumber,
+              signerName,
+              signerTitle,
+              confirmedAt: new Date().toISOString(),
+              negotiationMessages: [...(quote.negotiationMessages || []), auditMsg],
+              updatedAt: "Just now",
+            };
+          }
+        })
+      );
+
+      return {
+        status: resultStatus,
+        routeType,
+        salesOrderNumber,
+        reApprovalReason,
+      };
+    },
+    [quotations]
+  );
+
   return (
     <QuotationsContext.Provider
       value={{
@@ -283,7 +585,11 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
         addQuotation,
         updateQuotation,
         getQuotation,
+        getQuotationByToken,
         getNextQuoteId,
+        submitCounterOffer,
+        addLineComment,
+        confirmQuotation,
       }}
     >
       {children}

@@ -221,6 +221,15 @@ export default function QuotationsPage() {
                   <td className="px-4 py-3.5 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Link
+                        href={`/portal/${q.portalToken || q.id}`}
+                        target="_blank"
+                        className="btn-ghost text-[11px] py-1 px-2 border border-[var(--border)] flex items-center gap-1 text-[var(--text-muted)] hover:text-[var(--primary)] hover:border-[var(--primary-subtle-border)]"
+                        title="Open Customer Negotiation Portal (External Masked View)"
+                      >
+                        <span>Portal</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </Link>
+                      <Link
                         href={`/quotations/${q.id}`}
                         className="btn-outline text-[11px] py-1 px-2.5 flex items-center gap-1 font-medium"
                       >
