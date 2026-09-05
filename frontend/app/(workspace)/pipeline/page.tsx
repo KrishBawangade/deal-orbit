@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useRole } from "@/context/RoleContext";
 import {
   Kanban,
@@ -106,6 +107,7 @@ const COLUMNS = [
 ] as const;
 
 export default function PipelinePage() {
+  const router = useRouter();
   const { activeUser } = useRole();
   const [search, setSearch] = useState("");
 
@@ -202,7 +204,9 @@ export default function PipelinePage() {
                   colDeals.map((deal) => (
                     <div
                       key={deal.id}
-                      className="card-glass p-3.5 rounded-lg border border-[var(--border)] hover:border-[var(--primary)]/50 transition-all space-y-2.5 group shadow-2xs"
+                      onClick={() => router.push(`/quotations/${deal.id}`)}
+                      className="card-glass p-3.5 rounded-lg border border-[var(--border)] hover:border-[var(--primary)]/50 hover:shadow-sm transition-all space-y-2.5 group shadow-2xs cursor-pointer"
+                      title={`Open quotation ${deal.id} (${deal.customerName})`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
@@ -257,11 +261,12 @@ export default function PipelinePage() {
                         </div>
 
                         <Link
-                          href="/quotations"
+                          href={`/quotations/${deal.id}`}
+                          onClick={(e) => e.stopPropagation()}
                           className="text-[11px] font-semibold text-[var(--primary)] hover:underline inline-flex items-center gap-0.5"
                         >
                           <span>Open</span>
-                          <ArrowRight className="w-3 h-3" />
+                          <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                         </Link>
                       </div>
                     </div>

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useRole } from "@/context/RoleContext";
 import { useQuotations, QuotationRecord } from "@/context/QuotationsContext";
 import {
@@ -22,6 +23,7 @@ import {
 } from "lucide-react";
 
 export default function QuotationsPage() {
+  const router = useRouter();
   const { activeUser } = useRole();
   const { quotations, isLoading, refetchQuotations } = useQuotations();
   const [filterTab, setFilterTab] = useState<"ALL" | "DRAFT" | "IN_REVIEW">("ALL");
@@ -234,16 +236,29 @@ export default function QuotationsPage() {
                 filteredQuotes.map((q) => (
                   <tr
                     key={q.id}
-                    className="hover:bg-[var(--card-hover)]/60 transition-colors group"
+                    onClick={() => router.push(`/quotations/${q.id}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        router.push(`/quotations/${q.id}`);
+                      }
+                    }}
+                    tabIndex={0}
+                    role="button"
+                    className="hover:bg-[var(--primary)]/5 transition-all group cursor-pointer focus:outline-none focus:bg-[var(--primary)]/10"
+                    title={`Click to open proposal ${q.id} (${q.customerName})`}
                   >
                     {/* Quote ID */}
-                    <td className="px-4 py-3.5 font-mono font-bold text-[var(--primary)]">
-                      {q.id}
+                    <td className="px-4 py-3.5 font-mono font-bold text-[var(--primary)] group-hover:underline">
+                      <div className="flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-[var(--primary)] opacity-70 group-hover:opacity-100 transition-opacity" />
+                        <span>{q.id}</span>
+                      </div>
                     </td>
 
                     {/* Customer Account & Tier */}
                     <td className="px-4 py-3.5">
-                      <div className="font-semibold text-[var(--text-main)] text-sm">
+                      <div className="font-semibold text-[var(--text-main)] text-sm group-hover:text-[var(--primary)] transition-colors">
                         {q.customerName}
                       </div>
                       <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-1.5 mt-0.5">
@@ -317,13 +332,12 @@ export default function QuotationsPage() {
                     {/* Actions */}
                     <td className="px-4 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Link
-                          href={`/quotations/${q.id}`}
-                          className="btn-outline text-[11px] py-1 px-2.5 flex items-center gap-1 font-medium"
+                        <span
+                          className="btn-outline text-[11px] py-1 px-2.5 flex items-center gap-1 font-medium group-hover:bg-[var(--primary)] group-hover:text-white group-hover:border-[var(--primary)] transition-all shadow-2xs"
                         >
                           <span>Open</span>
-                          <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--primary)] transition-colors" />
-                        </Link>
+                          <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-white group-hover:translate-x-0.5 transition-all" />
+                        </span>
                       </div>
                     </td>
                   </tr>
