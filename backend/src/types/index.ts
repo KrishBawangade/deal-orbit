@@ -41,3 +41,7 @@ export * from './deal-health.types';
 
 // 13. Admin Configuration & Sales Reporting
 export * from './admin.types';
+
+// 14. Price Lists & Currency / Tier Pricing
+export * from './priceList.types';
+
