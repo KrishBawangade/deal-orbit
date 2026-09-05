@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { QuotationsProvider, useQuotations } from "@/context/QuotationsContext";
 import Logo from "@/components/Logo";
 import {
@@ -16,6 +17,8 @@ import {
 
 function PortalShell({ children }: { children: React.ReactNode }) {
   const { quotations } = useQuotations();
+  const pathname = usePathname();
+  const portalHome = pathname && pathname.startsWith("/portal") ? pathname : "/portal/demo-token";
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--background)] selection:bg-[var(--primary)] selection:text-white">
@@ -24,7 +27,7 @@ function PortalShell({ children }: { children: React.ReactNode }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           {/* Logo & Portal Room Title */}
           <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-2 group">
+            <Link href={portalHome} className="flex items-center gap-2 group" title="Customer Proposal Room">
               <Logo size="sm" showText={true} />
             </Link>
 

@@ -130,11 +130,11 @@ export default function PipelinePage() {
 
         <div className="flex items-center gap-3">
           <Link
-            href="/quotations"
-            className="btn-primary text-xs py-2 px-4 flex items-center gap-2 shadow-sm"
+            href="/quotations/new"
+            className="btn-primary text-xs py-2 px-4 flex items-center gap-2 shadow-sm cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Create Quote</span>
+            <span>New Quotation</span>
           </Link>
         </div>
       </div>

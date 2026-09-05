@@ -47,6 +47,22 @@ export const ROLE_PERSONAS: Record<Role, ActiveUser> = {
     avatarText: "AA",
     role: "ADMIN",
   },
+  CUSTOMER: {
+    name: "David Chen",
+    roleLabel: "Customer / Buyer",
+    email: "customer.acme@dealorbit.io",
+    badgeClass: "badge-accent",
+    avatarText: "DC",
+    role: "CUSTOMER",
+  },
+};
+
+export const ROLE_HOME_PATHS: Record<Role, string> = {
+  SALES_REP: "/quotations",
+  SALES_MANAGER: "/approvals",
+  FINANCE_OPS: "/billing",
+  ADMIN: "/admin",
+  CUSTOMER: "/portal/demo-token",
 };
 
 export interface RoleContextType {

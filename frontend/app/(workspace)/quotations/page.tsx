@@ -16,6 +16,8 @@ import {
   Zap,
   Sparkles,
   ChevronRight,
+  TrendingUp,
+  Layers,
 } from "lucide-react";
 
 export default function QuotationsPage() {
@@ -60,6 +62,67 @@ export default function QuotationsPage() {
             <Plus className="w-4 h-4" />
             <span>New Quotation</span>
           </Link>
+        </div>
+      </div>
+
+      {/* 2. Key Sales Telemetry Metrics Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Metric 1 */}
+        <div className="card-glass p-4 rounded-xl border border-[var(--border)]/70 flex items-center justify-between">
+          <div className="space-y-1">
+            <div className="text-xs text-[var(--text-muted)] font-medium">Active Quotations</div>
+            <div className="text-2xl font-bold text-[var(--text-main)] font-heading">
+              {quotations.length} Deals
+            </div>
+            <div className="text-[11px] text-emerald-600 font-medium">
+              {draftCount} Drafts, {inReviewCount} In Review
+            </div>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
+            <FileText className="w-5 h-5" />
+          </div>
+        </div>
+
+        {/* Metric 2 */}
+        <div className="card-glass p-4 rounded-xl border border-[var(--border)]/70 flex items-center justify-between">
+          <div className="space-y-1">
+            <div className="text-xs text-[var(--text-muted)] font-medium">Weighted Pipeline Value</div>
+            <div className="text-2xl font-bold text-[var(--text-main)] font-heading">₹32,80,000</div>
+            <div className="text-[11px] text-emerald-600 font-medium">
+              +14% vs. target quota
+            </div>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+            <TrendingUp className="w-5 h-5" />
+          </div>
+        </div>
+
+        {/* Metric 3 */}
+        <div className="card-glass p-4 rounded-xl border border-[var(--border)]/70 flex items-center justify-between">
+          <div className="space-y-1">
+            <div className="text-xs text-[var(--text-muted)] font-medium">Blended Margin Floor</div>
+            <div className="text-2xl font-bold text-[var(--text-main)] font-heading">21.5%</div>
+            <div className="text-[11px] text-emerald-600 font-medium">
+              Protected across tiers
+            </div>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+        </div>
+
+        {/* Metric 4 */}
+        <div className="card-glass p-4 rounded-xl border border-[var(--border)]/70 flex items-center justify-between">
+          <div className="space-y-1">
+            <div className="text-xs text-[var(--text-muted)] font-medium">Inventory Feasibility</div>
+            <div className="text-2xl font-bold text-[var(--text-main)] font-heading">100% Ready</div>
+            <div className="text-[11px] text-[var(--text-muted)]">
+              Main Central & East Hub
+            </div>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+            <Layers className="w-5 h-5" />
+          </div>
         </div>
       </div>
 

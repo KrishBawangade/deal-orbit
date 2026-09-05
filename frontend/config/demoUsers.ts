@@ -30,9 +30,9 @@ export const DEMO_USERS: IDemoUser[] = [
     department: "Sales Operations",
     avatar: "SJ",
     badgeColor: {
-      bg: "bg-amber-500/10 dark:bg-amber-500/20",
-      text: "text-amber-700 dark:text-amber-400",
-      border: "border-amber-500/30",
+      bg: "bg-amber-500/10",
+      text: "text-amber-800",
+      border: "border-amber-500/25",
     },
     description: "Builds complex quotations, configures pricing, and submits discount requests.",
     permissions: [
@@ -54,9 +54,9 @@ export const DEMO_USERS: IDemoUser[] = [
     department: "Sales Leadership",
     avatar: "MV",
     badgeColor: {
-      bg: "bg-indigo-500/10 dark:bg-indigo-500/20",
-      text: "text-indigo-700 dark:text-indigo-400",
-      border: "border-indigo-500/30",
+      bg: "bg-indigo-500/10",
+      text: "text-indigo-800",
+      border: "border-indigo-500/25",
     },
     description: "Evaluates margin risk, approves steep discounts, and overrides thresholds.",
     permissions: [
@@ -78,9 +78,9 @@ export const DEMO_USERS: IDemoUser[] = [
     department: "Finance & Order Ops",
     avatar: "ER",
     badgeColor: {
-      bg: "bg-emerald-500/10 dark:bg-emerald-500/20",
-      text: "text-emerald-700 dark:text-emerald-400",
-      border: "border-emerald-500/30",
+      bg: "bg-emerald-500/10",
+      text: "text-emerald-800",
+      border: "border-emerald-500/25",
     },
     description: "Governs contract payment terms, oversees billing cycles, and validates orders.",
     permissions: [
@@ -102,9 +102,9 @@ export const DEMO_USERS: IDemoUser[] = [
     department: "Global Procurement",
     avatar: "DC",
     badgeColor: {
-      bg: "bg-cyan-500/10 dark:bg-cyan-500/20",
-      text: "text-cyan-700 dark:text-cyan-400",
-      border: "border-cyan-500/30",
+      bg: "bg-cyan-500/10",
+      text: "text-cyan-800",
+      border: "border-cyan-500/25",
     },
     description: "Reviews received quotations, proposes counter-offers, and e-signs contracts.",
     permissions: [
@@ -126,9 +126,9 @@ export const DEMO_USERS: IDemoUser[] = [
     department: "Platform Operations",
     avatar: "AR",
     badgeColor: {
-      bg: "bg-purple-500/10 dark:bg-purple-500/20",
-      text: "text-purple-700 dark:text-purple-400",
-      border: "border-purple-500/30",
+      bg: "bg-purple-500/10",
+      text: "text-purple-800",
+      border: "border-purple-500/25",
     },
     description: "Comprehensive administration, audit log inspection, and system policies.",
     permissions: [

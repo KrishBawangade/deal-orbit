@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Logo from "@/components/Logo";
-import { useOptionalRole, ROLE_PERSONAS } from "@/context/RoleContext";
+import { useOptionalRole, ROLE_PERSONAS, ROLE_HOME_PATHS } from "@/context/RoleContext";
 import type { Role } from "@/types";
 import {
   Search,
@@ -102,8 +102,16 @@ export default function Navbar({
       ? DEFAULT_LANDING_LINKS
       : []);
 
-  // Determine logo destination
-  const resolvedLogoHref = logoHref || (variant === "workspace" ? "/dashboard" : "/");
+  // Determine role-adaptive logo destination
+  const activeRole = roleContext?.activeUser?.role;
+  const roleHomePath = activeRole ? ROLE_HOME_PATHS[activeRole] : undefined;
+  const resolvedLogoHref =
+    logoHref ||
+    (activeRole === "CUSTOMER"
+      ? "/portal/demo-token"
+      : variant === "workspace"
+      ? roleHomePath || "/quotations"
+      : "/");
 
   // Fallback user info if not inside RoleProvider
   const user = roleContext?.activeUser || {
@@ -254,23 +262,36 @@ export default function Navbar({
 
                     {/* Quick Menu Actions */}
                     <div className="py-1 px-1.5 space-y-0.5 text-xs text-[var(--text-body)]">
-                      <Link
-                        href="/quotations"
-                        onClick={() => setProfileOpen(false)}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-[var(--card-hover)]/70 hover:text-[var(--text-main)] transition-colors"
-                      >
-                        <FileText className="w-4 h-4 text-[var(--text-muted)]" />
-                        <span>My Active Quotations</span>
-                      </Link>
+                      {user.role === "CUSTOMER" ? (
+                        <Link
+                          href="/portal/demo-token"
+                          onClick={() => setProfileOpen(false)}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-[var(--card-hover)]/70 hover:text-[var(--text-main)] transition-colors"
+                        >
+                          <FileText className="w-4 h-4 text-[var(--primary)]" />
+                          <span>Customer Proposal Portal</span>
+                        </Link>
+                      ) : (
+                        <>
+                          <Link
+                            href="/quotations"
+                            onClick={() => setProfileOpen(false)}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-[var(--card-hover)]/70 hover:text-[var(--text-main)] transition-colors"
+                          >
+                            <FileText className="w-4 h-4 text-[var(--text-muted)]" />
+                            <span>My Active Quotations</span>
+                          </Link>
 
-                      <Link
-                        href="/pipeline"
-                        onClick={() => setProfileOpen(false)}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-[var(--card-hover)]/70 hover:text-[var(--text-main)] transition-colors"
-                      >
-                        <Kanban className="w-4 h-4 text-[var(--text-muted)]" />
-                        <span>Kanban Deal Pipeline</span>
-                      </Link>
+                          <Link
+                            href="/pipeline"
+                            onClick={() => setProfileOpen(false)}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-[var(--card-hover)]/70 hover:text-[var(--text-main)] transition-colors"
+                          >
+                            <Kanban className="w-4 h-4 text-[var(--text-muted)]" />
+                            <span>Kanban Deal Pipeline</span>
+                          </Link>
+                        </>
+                      )}
                     </div>
 
                     {/* Sign Out Action */}

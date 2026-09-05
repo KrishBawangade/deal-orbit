@@ -29,7 +29,7 @@ function WorkspaceContent({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-[var(--background)] selection:bg-[var(--primary)] selection:text-white">
       {/* 1. Global Reusable Glassmorphism Navbar for Workspace */}
-      <Navbar variant="workspace" logoHref="/dashboard" />
+      <Navbar variant="workspace" />
 
       {/* 2. Main Workspace Canvas */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">

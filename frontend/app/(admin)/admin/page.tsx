@@ -24,7 +24,7 @@ function AdminContent() {
   return (
     <div className="min-h-screen flex flex-col bg-[var(--background)]">
       {/* Workspace Navbar */}
-      <Navbar variant="workspace" logoHref="/dashboard" />
+      <Navbar variant="workspace" logoHref="/quotations" />
 
       {/* Admin Canvas */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
@@ -33,11 +33,11 @@ function AdminContent() {
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
               <Link
-                href="/dashboard"
+                href="/quotations"
                 className="hover:text-[var(--text-main)] flex items-center gap-1 font-medium transition-colors"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Return to Sales Workspace</span>
+                <span>Return to Quotations</span>
               </Link>
               <span>/</span>
               <span className="font-semibold text-[var(--text-main)]">Back-end Configuration</span>
