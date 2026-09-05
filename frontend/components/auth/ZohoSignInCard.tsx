@@ -11,6 +11,8 @@ import { GoogleIcon } from "./SocialIcons";
 import { DemoUserPicker } from "./DemoUserPicker";
 import { siteConfig } from "@/config/site";
 import { IDemoUser, getDemoUserByEmail, isDemoCredential } from "@/config/demoUsers";
+import { ROLE_HOME_PATHS } from "@/context/RoleContext";
+import type { Role } from "@/types";
 
 interface ZohoSignInCardProps {
   onToggleToSignUp?: () => void;
@@ -41,10 +43,7 @@ export function ZohoSignInCard({
       document.cookie = `dealorbit_role=${user.role}; path=/; max-age=604800; SameSite=Lax`;
       toast.success(`Welcome, ${user.name}! Signed in as ${user.roleLabel}`);
 
-      let destination = "/quotations";
-      if (user.role === "CUSTOMER") destination = "/portal/demo-token";
-      else if (user.role === "ADMIN") destination = "/admin";
-
+      const destination = ROLE_HOME_PATHS[user.role as Role] || "/quotations";
       router.push(destination);
     }, 350);
   };
@@ -119,10 +118,7 @@ export function ZohoSignInCard({
         document.cookie = `dealorbit_role=${user.role}; path=/; max-age=604800; SameSite=Lax`;
         toast.success(`Welcome back, ${user.name}!`);
 
-        let destination = "/quotations";
-        if (user.role === "CUSTOMER") destination = "/portal/demo-token";
-        else if (user.role === "ADMIN") destination = "/admin";
-
+        const destination = ROLE_HOME_PATHS[user.role as Role] || "/quotations";
         router.push(destination);
         return;
       }

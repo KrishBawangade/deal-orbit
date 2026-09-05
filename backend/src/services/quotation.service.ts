@@ -43,6 +43,23 @@ export class QuotationService {
         }
       }
 
+      let approvalStage: 'SALES_MANAGER' | 'FINANCE' | 'COMPLETED' | 'REJECTED' | 'RETURNED' = 'COMPLETED';
+      if (q.status === 'IN_REVIEW') {
+        const tier1Pending = q.approvalRequests?.some((a: any) => a.tierLevel === 1 && a.status === 'PENDING');
+        const tier2Pending = q.approvalRequests?.some((a: any) => a.tierLevel === 2 && a.status === 'PENDING');
+        if (tier1Pending) {
+          approvalStage = 'SALES_MANAGER';
+        } else if (tier2Pending) {
+          approvalStage = 'FINANCE';
+        } else {
+          approvalStage = 'SALES_MANAGER';
+        }
+      } else if (q.status === 'APPROVED') {
+        approvalStage = 'COMPLETED';
+      } else if (q.status === 'REJECTED') {
+        approvalStage = 'REJECTED';
+      }
+
       const tier = (q.customer?.tier as CustomerTier) || 'BRONZE';
       const tierCeiling = DEFAULT_CUSTOMER_TIER_CEILINGS[tier] || 10.0;
 
@@ -68,6 +85,7 @@ export class QuotationService {
         riskScore: riskNum,
         status: q.status,
         approvalRequirement,
+        approvalStage,
         repName: q.salesRep?.name || 'Assigned Rep',
         repEmail: q.salesRep?.email,
         updatedAt: q.updatedAt.toISOString(),
@@ -147,6 +165,23 @@ export class QuotationService {
       }
     }
 
+    let approvalStage: 'SALES_MANAGER' | 'FINANCE' | 'COMPLETED' | 'REJECTED' | 'RETURNED' = 'COMPLETED';
+    if (quote.status === 'IN_REVIEW') {
+      const tier1Pending = quote.approvalRequests?.some((a: any) => a.tierLevel === 1 && a.status === 'PENDING');
+      const tier2Pending = quote.approvalRequests?.some((a: any) => a.tierLevel === 2 && a.status === 'PENDING');
+      if (tier1Pending) {
+        approvalStage = 'SALES_MANAGER';
+      } else if (tier2Pending) {
+        approvalStage = 'FINANCE';
+      } else {
+        approvalStage = 'SALES_MANAGER';
+      }
+    } else if (quote.status === 'APPROVED') {
+      approvalStage = 'COMPLETED';
+    } else if (quote.status === 'REJECTED') {
+      approvalStage = 'REJECTED';
+    }
+
     return {
       id: quote.quoteNumber,
       internalId: quote.id,
@@ -169,6 +204,7 @@ export class QuotationService {
       riskScore: riskNum,
       status: quote.status,
       approvalRequirement,
+      approvalStage,
       repName: quote.salesRep?.name || 'Assigned Rep',
       repEmail: quote.salesRep?.email,
       updatedAt: quote.updatedAt.toISOString(),

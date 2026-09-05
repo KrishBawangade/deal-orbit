@@ -74,13 +74,15 @@ export default function QuotationsPage() {
             <span>{isLoading ? "Syncing..." : "Sync Live API"}</span>
           </button>
 
-          <Link
-            href="/quotations/new"
-            className="btn-primary text-xs py-2 px-4 flex items-center gap-2 shadow-sm cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Quotation</span>
-          </Link>
+          {activeUser.role !== "FINANCE_OPS" && (
+            <Link
+              href="/quotations/new"
+              className="btn-primary text-xs py-2 px-4 flex items-center gap-2 shadow-sm cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>New Quotation</span>
+            </Link>
+          )}
         </div>
       </div>
 

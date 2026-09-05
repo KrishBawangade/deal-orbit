@@ -28,6 +28,9 @@ export function proxy(request: NextRequest) {
     if (role === 'ADMIN') {
       return NextResponse.redirect(new URL('/admin', request.url));
     }
+    if (role === 'SALES_MANAGER' || role === 'FINANCE_OPS') {
+      return NextResponse.redirect(new URL('/approvals', request.url));
+    }
     return NextResponse.redirect(new URL('/quotations', request.url));
   }
 

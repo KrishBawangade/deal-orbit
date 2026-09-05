@@ -19,10 +19,102 @@ import {
 } from "lucide-react";
 import { useQuotations, type QuotationRecord } from "@/context/QuotationsContext";
 import { useRole } from "@/context/RoleContext";
+import type { Role } from "@/types";
 import DiscountApprovalScreen from "./DiscountApprovalScreen";
 
 interface ApprovalsInboxViewProps {
   initialQuoteId?: string;
+}
+
+type TabType = "PENDING" | "HIGH_RISK" | "APPROVED" | "REVISIONS";
+
+export function isAwaitingSalesManager(q: QuotationRecord): boolean {
+  if (q.status !== "IN_REVIEW") return false;
+  // In single-tier and two-tier approvals, if it is in review and has not yet reached Finance or Completed,
+  // it is waiting on Sales Manager Tier-1 review
+  return q.approvalStage !== "FINANCE" && q.approvalStage !== "COMPLETED";
+}
+
+export function isAwaitingFinance(q: QuotationRecord): boolean {
+  if (q.status !== "IN_REVIEW") return false;
+  // A quote in review requires Finance sign-off ONLY when it is officially at stage 'FINANCE'
+  return q.approvalStage === "FINANCE";
+}
+
+function checkQuoteTabEligibility(
+  q: QuotationRecord,
+  tab: TabType,
+  role: Role
+): boolean {
+  switch (tab) {
+    case "PENDING":
+      if (role === "FINANCE_OPS") {
+        return isAwaitingFinance(q);
+      }
+      if (role === "SALES_MANAGER") {
+        return isAwaitingSalesManager(q);
+      }
+      return q.status === "IN_REVIEW";
+
+    case "HIGH_RISK": {
+      const isHigh = q.riskScore > 50 || q.blendedMargin < 18;
+      if (!isHigh) return false;
+      if (role === "FINANCE_OPS") {
+        return isAwaitingFinance(q) || Boolean(q.auditTrail?.some((a) => a.actorRole === "FINANCE_OPS"));
+      }
+      if (role === "SALES_MANAGER") {
+        return isAwaitingSalesManager(q) || Boolean(q.auditTrail?.some((a) => a.actorRole === "SALES_MANAGER"));
+      }
+      return true;
+    }
+
+    case "APPROVED": {
+      const isApproved = q.status === "APPROVED" || q.approvalStage === "COMPLETED";
+      if (!isApproved) return false;
+      if (role === "FINANCE_OPS") {
+        return (
+          q.approvalRequirement === "DUAL_REQUIRED" ||
+          q.approvalRequirement === "FINANCE_REQUIRED" ||
+          q.riskScore > 50 ||
+          Boolean(q.auditTrail?.some((a) => a.actorRole === "FINANCE_OPS"))
+        );
+      }
+      if (role === "SALES_MANAGER") {
+        return (
+          q.approvalRequirement === "MANAGER_REQUIRED" ||
+          q.approvalRequirement === "DUAL_REQUIRED" ||
+          Boolean(q.auditTrail?.some((a) => a.actorRole === "SALES_MANAGER")) ||
+          q.approvalStage === "COMPLETED"
+        );
+      }
+      return true;
+    }
+
+    case "REVISIONS": {
+      const isRevision = q.approvalStage === "RETURNED" || q.status === "REJECTED";
+      if (!isRevision) return false;
+      if (role === "FINANCE_OPS") {
+        return Boolean(
+          q.auditTrail?.some(
+            (a) => a.actorRole === "FINANCE_OPS" && (a.action === "RETURNED_FOR_REVISION" || a.action === "REJECTED")
+          )
+        );
+      }
+      if (role === "SALES_MANAGER") {
+        return (
+          Boolean(
+            q.auditTrail?.some(
+              (a) => a.actorRole === "SALES_MANAGER" && (a.action === "RETURNED_FOR_REVISION" || a.action === "REJECTED")
+            )
+          ) || q.approvalStage === "RETURNED"
+        );
+      }
+      return true;
+    }
+
+    default:
+      return true;
+  }
 }
 
 export default function ApprovalsInboxView({ initialQuoteId }: ApprovalsInboxViewProps) {
@@ -30,10 +122,10 @@ export default function ApprovalsInboxView({ initialQuoteId }: ApprovalsInboxVie
   const { activeUser, currentRole } = useRole();
 
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(initialQuoteId || null);
-  const [activeTab, setActiveTab] = useState<"PENDING" | "HIGH_RISK" | "APPROVED" | "REVISIONS">("PENDING");
+  const [activeTab, setActiveTab] = useState<TabType>("PENDING");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Filter quotes based on activeTab and search
+  // Filter quotes based on activeTab, search, and activeRole
   const filteredQuotes = useMemo(() => {
     return quotations.filter((q) => {
       const matchesSearch =
@@ -43,37 +135,37 @@ export default function ApprovalsInboxView({ initialQuoteId }: ApprovalsInboxVie
 
       if (!matchesSearch) return false;
 
-      switch (activeTab) {
-        case "PENDING":
-          return q.status === "IN_REVIEW";
-        case "HIGH_RISK":
-          return q.riskScore > 50 || q.blendedMargin < 18;
-        case "APPROVED":
-          return q.status === "APPROVED" || q.approvalStage === "COMPLETED";
-        case "REVISIONS":
-          return q.approvalStage === "RETURNED" || q.status === "REJECTED";
-        default:
-          return true;
-      }
+      return checkQuoteTabEligibility(q, activeTab, currentRole);
     });
-  }, [quotations, activeTab, searchQuery]);
+  }, [quotations, activeTab, searchQuery, currentRole]);
 
-  // Aggregate governance metrics
+  // Tab counts dynamically calculated per role
+  const tabCounts = useMemo(() => {
+    return {
+      pending: quotations.filter((q) => checkQuoteTabEligibility(q, "PENDING", currentRole)).length,
+      highRisk: quotations.filter((q) => checkQuoteTabEligibility(q, "HIGH_RISK", currentRole)).length,
+      approved: quotations.filter((q) => checkQuoteTabEligibility(q, "APPROVED", currentRole)).length,
+      revisions: quotations.filter((q) => checkQuoteTabEligibility(q, "REVISIONS", currentRole)).length,
+    };
+  }, [quotations, currentRole]);
+
+  // Aggregate governance metrics tailored by role
   const metrics = useMemo(() => {
     const pending = quotations.filter((q) => q.status === "IN_REVIEW");
-    const managerPending = pending.filter((q) => q.approvalStage === "SALES_MANAGER");
-    const financePending = pending.filter((q) => q.approvalStage === "FINANCE" || (q.riskScore > 50 && q.approvalStage !== "COMPLETED"));
+    const managerPending = pending.filter(isAwaitingSalesManager);
+    const financePending = pending.filter(isAwaitingFinance);
+
     const highRiskValue = quotations
       .filter((q) => q.riskScore > 50 || q.blendedMargin < 18)
       .reduce((sum, q) => sum + (q.totalAmount || 0), 0);
 
     return {
-      pendingCount: pending.length,
+      pendingCount: tabCounts.pending,
       managerPendingCount: managerPending.length,
       financePendingCount: financePending.length,
       highRiskExposureFormatted: `₹${(highRiskValue / 100000).toFixed(1)}L`,
     };
-  }, [quotations]);
+  }, [quotations, tabCounts.pending]);
 
   // Find currently selected quote
   const selectedQuote = useMemo(() => {
@@ -187,7 +279,7 @@ export default function ApprovalsInboxView({ initialQuoteId }: ApprovalsInboxVie
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            Pending Review ({metrics.pendingCount})
+            Pending Review ({tabCounts.pending})
           </button>
           <button
             type="button"
@@ -198,7 +290,7 @@ export default function ApprovalsInboxView({ initialQuoteId }: ApprovalsInboxVie
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            High Risk &gt;50
+            High Risk &gt;50 ({tabCounts.highRisk})
           </button>
           <button
             type="button"
@@ -209,7 +301,7 @@ export default function ApprovalsInboxView({ initialQuoteId }: ApprovalsInboxVie
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            Approved Ledger
+            Approved Ledger ({tabCounts.approved})
           </button>
           <button
             type="button"
@@ -220,7 +312,7 @@ export default function ApprovalsInboxView({ initialQuoteId }: ApprovalsInboxVie
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            Revisions / Rejected
+            Revisions / Rejected ({tabCounts.revisions})
           </button>
         </div>
 
@@ -242,9 +334,21 @@ export default function ApprovalsInboxView({ initialQuoteId }: ApprovalsInboxVie
         {filteredQuotes.length === 0 ? (
           <div className="rounded-2xl border border-[var(--border)] bg-white p-12 text-center space-y-2 shadow-xs">
             <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
-            <h3 className="text-sm font-bold text-[var(--text-main)]">Inbox All Clear</h3>
+            <h3 className="text-sm font-bold text-[var(--text-main)]">
+              {activeTab === "PENDING"
+                ? "Inbox All Clear"
+                : activeTab === "HIGH_RISK"
+                ? "No High Risk Deals"
+                : activeTab === "APPROVED"
+                ? "No Approved Deals"
+                : "No Returned or Rejected Deals"}
+            </h3>
             <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto">
-              No quotations found under this filter criteria. All submitted proposals have been reviewed.
+              {activeTab === "PENDING" && currentRole === "FINANCE_OPS"
+                ? "No quotations currently awaiting Finance sign-off. High-risk deals requiring Tier-2 approval will appear here once approved by the Sales Manager."
+                : activeTab === "HIGH_RISK" && currentRole === "FINANCE_OPS"
+                ? "No high-risk quotations currently active in the Finance queue."
+                : `No quotations found under ${activeTab.toLowerCase().replace("_", " ")} criteria for ${activeUser.roleLabel}.`}
             </p>
           </div>
         ) : (
@@ -321,11 +425,11 @@ export default function ApprovalsInboxView({ initialQuoteId }: ApprovalsInboxVie
                   <div>
                     <span className="block text-[10px] font-medium uppercase tracking-wider">Current Stage</span>
                     <span className="font-semibold text-indigo-600">
-                      {quote.approvalStage === "FINANCE"
+                      {isAwaitingFinance(quote)
                         ? "Pending Finance Director"
-                        : quote.approvalStage === "SALES_MANAGER"
+                        : isAwaitingSalesManager(quote)
                         ? "Pending Sales Manager"
-                        : quote.status}
+                        : quote.approvalStage || quote.status}
                     </span>
                   </div>
                 </div>

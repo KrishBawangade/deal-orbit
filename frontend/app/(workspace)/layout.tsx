@@ -22,6 +22,7 @@ function WorkspaceContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   const getPageTitle = () => {
+    if (pathname.startsWith("/approvals")) return "Discount Approvals & Commercial Governance";
     if (pathname.startsWith("/quotations")) return "Quotations Management";
     if (pathname.startsWith("/pipeline")) return "Deal Pipeline Kanban";
     if (pathname.startsWith("/fulfillment")) return "Fulfillment & Warehouse Split";

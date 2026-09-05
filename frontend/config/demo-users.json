@@ -54,7 +54,7 @@
       "ERP invoice & billing synchronization",
       "Revenue recognition auditing"
     ],
-    "defaultPath": "/billing"
+    "defaultPath": "/approvals"
   },
   {
     "id": "demo-user-customer",

@@ -60,7 +60,7 @@ export const ROLE_PERSONAS: Record<Role, ActiveUser> = {
 export const ROLE_HOME_PATHS: Record<Role, string> = {
   SALES_REP: "/quotations",
   SALES_MANAGER: "/approvals",
-  FINANCE_OPS: "/billing",
+  FINANCE_OPS: "/approvals",
   ADMIN: "/admin",
   CUSTOMER: "/portal/demo-token",
 };

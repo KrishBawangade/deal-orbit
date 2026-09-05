@@ -605,7 +605,10 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
 
       const data = await res.json();
       if (data.success && Array.isArray(data.data?.quotations)) {
-        const serverQuotes: QuotationRecord[] = data.data.quotations;
+        const serverQuotes: QuotationRecord[] = data.data.quotations.map((q: any) => ({
+          ...q,
+          approvalStage: q.approvalStage || (q.status === "IN_REVIEW" ? "SALES_MANAGER" : undefined),
+        }));
         setQuotations(serverQuotes);
         if (typeof window !== "undefined") {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(serverQuotes));
