@@ -2,8 +2,8 @@
  * ==============================================================================
  * SINGLE SOURCE OF TRUTH DESIGN TOKENS — DEALORBIT (COSMIC ORBIT)
  * ==============================================================================
- * Edit any variable in this file to update the entire application's theme,
- * typography, colors, borders, and geometry instantly.
+ * Single source of truth for DealOrbit's enterprise B2B SaaS visual language.
+ * Clean, restrained, warm off-white canvas, deep navy typography, cobalt accents.
  */
 
 :root {
@@ -86,10 +86,10 @@
   /* --------------------------------------------------------------------------
    * 4. Typography Colors
    * -------------------------------------------------------------------------- */
-  --text-main: #0f172a;           /* Slate 900: High-contrast primary headings */
-  --text-body: #334155;           /* Slate 700: Main paragraph & reading text */
+  --text-main: #0f172a;           /* Deep Navy / Slate 900: Headings & critical numbers */
+  --text-body: #334155;           /* Slate 700: Body paragraphs and regular text */
   --text-muted: #64748b;          /* Slate 500: Subtitles, captions, metadata */
-  --text-subtle: #94a3b8;         /* Slate 400: Placeholders & disabled text */
+  --text-subtle: #94a3b8;         /* Slate 400: Labels, placeholders, disabled text */
 
   /* --------------------------------------------------------------------------
    * 5. Corner Radii (Geometry)

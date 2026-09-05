@@ -5,8 +5,11 @@ import { fontHeading, fontSans } from "@/config/fonts";
 import { Toaster } from "@/components/Toaster";
 
 export const metadata: Metadata = {
-  title: `${siteConfig.name} | Intelligent Sales Operations Platform`,
+  title: `${siteConfig.name} — Intelligent, Self-Governing Sales Operations Platform`,
   description: siteConfig.description,
+  icons: {
+    icon: "/dealorbit-logo.png",
+  },
 };
 
 export default function RootLayout({

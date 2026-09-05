@@ -45,10 +45,11 @@ export interface NavbarProps {
 }
 
 const DEFAULT_LANDING_LINKS: NavItem[] = [
-  { label: "Features", href: "/#features" },
-  { label: "Architecture", href: "/#architecture" },
-  { label: "Strategy Simulator", href: "/#simulator" },
-  { label: "Quotations", href: "/quotations" },
+  { label: "Platform", href: "#platform" },
+  { label: "Simulator", href: "#simulator" },
+  { label: "Governance", href: "#governance" },
+  { label: "How It Works", href: "#how-it-works" },
+  { label: "Telemetry", href: "#telemetry" },
 ];
 
 const DEFAULT_WORKSPACE_LINKS: NavItem[] = [
@@ -265,21 +266,21 @@ export default function Navbar({
               </div>
             </>
           ) : (
-            /* Landing Page Right Slot: Sign In & Launch App CTA */
+            /* Landing Page Right Slot: Sign In & Get Started CTA */
             <div className="flex items-center gap-2.5">
-              <Link
-                href="/dashboard"
+              <a
+                href="#"
                 className="btn-ghost text-xs py-1.5 px-3 hidden sm:inline-flex"
               >
                 Sign In
-              </Link>
-              <Link
-                href="/dashboard"
+              </a>
+              <a
+                href="#"
                 className="btn-primary text-xs py-1.5 px-3.5 shadow-sm flex items-center gap-1.5"
               >
-                <span>Launch Workspace</span>
+                <span>Get Started</span>
                 <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+              </a>
             </div>
           )}
 
@@ -326,13 +327,13 @@ export default function Navbar({
 
           {variant === "landing" && (
             <div className="pt-2 border-t border-[var(--border-subtle)]/70 flex flex-col gap-2">
-              <Link
-                href="/dashboard"
+              <a
+                href="#"
                 onClick={() => setMobileMenuOpen(false)}
                 className="btn-primary text-center text-xs py-2 w-full justify-center"
               >
-                Launch Workspace
-              </Link>
+                Get Started
+              </a>
             </div>
           )}
         </div>
