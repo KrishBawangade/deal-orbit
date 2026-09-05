@@ -19,7 +19,10 @@ export class AuthService {
 
   private sanitizeUser(user: User): IUserResponse {
     const { passwordHash: _, ...sanitized } = user;
-    return sanitized;
+    return {
+      ...sanitized,
+      historicalAvgDiscount: Number(user.historicalAvgDiscount || 0),
+    };
   }
 
   private calculateExpiryDate(expiresInStr: string): Date {
@@ -78,7 +81,7 @@ export class AuthService {
 
     const user = await this.users.create({
       email: dto.email.toLowerCase(),
-      name: dto.name || null,
+      name: dto.name || dto.email.split('@')[0],
       passwordHash,
       isActive: true,
     });

@@ -1,59 +1,43 @@
-export interface IApiResponse<T = unknown> {
-  success: boolean;
-  message: string;
-  data?: T;
-  error?: string | Record<string, unknown>;
-  timestamp: string;
-}
+/**
+ * DealOrbit Central Types Barrel Export
+ * Single source of truth for all backend services, controllers, repositories, and API clients.
+ */
 
-export interface IHealthStatus {
-  status: 'ok' | 'degraded' | 'down';
-  uptimeSeconds: number;
-  timestamp: string;
-  environment: string;
-  database: {
-    connected: boolean;
-    type: string;
-    latencyMs?: number;
-    error?: string;
-  };
-  memory: {
-    rss: string;
-    heapTotal: string;
-    heapUsed: string;
-    external: string;
-  };
-}
+// 1. Enums and Literal Constants
+export * from './enums.types';
 
-export interface IAuthUser {
-  id: string;
-  email: string;
-}
+// 2. Common API Envelopes, Pagination & Health
+export * from './common.types';
 
-export interface IUserResponse {
-  id: string;
-  email: string;
-  name: string | null;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
+// 3. Identity, Access & Auth
+export * from './auth.types';
 
-export interface IAuthTokens {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: string;
-}
+// 4. Customer & Negotiation Profiles
+export * from './customer.types';
 
-export interface IAuthResponse {
-  user: IUserResponse;
-  tokens: IAuthTokens;
-}
+// 5. Products, Categories, Variants & Upsell Rules
+export * from './product.types';
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: IAuthUser;
-    }
-  }
-}
+// 6. Living Quotations & Pricing Engine
+export * from './quotation.types';
+
+// 7. Deal Strategy Simulator
+export * from './simulation.types';
+
+// 8. Governance, Discount Ceilings, Approvals & Audits
+export * from './governance.types';
+
+// 9. Restricted Customer Negotiation Portal (Masked)
+export * from './portal.types';
+
+// 10. Multi-Warehouse Fulfillment & Logistics
+export * from './fulfillment.types';
+
+// 11. Hybrid Commercial Billing, Subscriptions & Proration
+export * from './billing.types';
+
+// 12. Deal Health & Anomaly Radar
+export * from './deal-health.types';
+
+// 13. Admin Configuration & Sales Reporting
+export * from './admin.types';

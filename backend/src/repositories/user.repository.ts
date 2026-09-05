@@ -1,11 +1,11 @@
-import { User } from '@prisma/client';
+import { User, Prisma } from '@prisma/client';
 import { prisma } from '../config/database';
 import { IBaseRepository } from './base.repository';
 
-export type CreateUserInput = Omit<User, 'id' | 'createdAt' | 'updatedAt'>;
-export type UpdateUserInput = Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>;
+export type CreateUserInput = Prisma.UserCreateInput;
+export type UpdateUserInput = Prisma.UserUpdateInput;
 
-export interface IUserRepository extends IBaseRepository<User, string> {
+export interface IUserRepository extends IBaseRepository<User, string, CreateUserInput> {
   findByEmail(email: string): Promise<User | null>;
 }
 
