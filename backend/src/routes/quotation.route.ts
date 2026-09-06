@@ -27,6 +27,18 @@ quotationRouter.get(
 );
 
 quotationRouter.post(
+  '/',
+  authorize(Role.SALES_REP, Role.SALES_MANAGER, Role.ADMIN),
+  quotationController.createQuotation
+);
+
+quotationRouter.put(
+  '/:id',
+  authorize(Role.SALES_REP, Role.SALES_MANAGER, Role.ADMIN),
+  quotationController.updateQuotation
+);
+
+quotationRouter.post(
   '/:id/decision',
   authorize(Role.SALES_MANAGER, Role.FINANCE_OPS, Role.ADMIN),
   validate(approvalDecisionSchema),

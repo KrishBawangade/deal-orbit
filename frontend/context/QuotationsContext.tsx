@@ -552,8 +552,8 @@ interface QuotationsContextType {
   isLoading: boolean;
   error: string | null;
   refetchQuotations: () => Promise<QuotationRecord[] | undefined>;
-  addQuotation: (quote: QuotationRecord) => void;
-  updateQuotation: (quote: QuotationRecord) => void;
+  addQuotation: (quote: QuotationRecord) => Promise<QuotationRecord | void> | void;
+  updateQuotation: (quote: QuotationRecord) => Promise<QuotationRecord | void> | void;
   getQuotation: (id: string) => QuotationRecord | undefined;
   getQuotationByToken: (token: string) => QuotationRecord | undefined;
   getNextQuoteId: () => string;
@@ -700,14 +700,163 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
     }
   }, [quotations, isLoaded]);
 
-  const addQuotation = useCallback((quote: QuotationRecord) => {
-    setQuotations((prev) => [quote, ...prev]);
+  const addQuotation = useCallback(async (quote: QuotationRecord) => {
+    // 1. Optimistic local state update
+    setQuotations((prev) => [quote, ...prev.filter((q) => q.id !== quote.id)]);
+
+    // 2. Persist to PostgreSQL backend API
+    try {
+      const token =
+        typeof window !== "undefined"
+          ? localStorage.getItem("dealorbit_token") ||
+            document.cookie
+              .split("; ")
+              .find((row) => row.startsWith("dealorbit_token="))
+              ?.split("=")[1]
+          : undefined;
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      } else {
+        headers["Authorization"] = `Bearer demo_token_sales_rep`;
+      }
+
+      const payload = {
+        quoteNumber: quote.id,
+        customerId: quote.customerId,
+        customerName: quote.customerName,
+        status: quote.status,
+        paymentTerms: quote.paymentTerms,
+        subtotalAmount: quote.subtotalAmount,
+        discountAmount: quote.discountAmount,
+        taxAmount: quote.taxAmount,
+        totalAmount: quote.totalAmount,
+        blendedMargin: quote.blendedMargin,
+        riskScore: quote.riskScore,
+        lines: quote.lines.map((l) => ({
+          productId: l.productId,
+          sku: l.sku,
+          name: l.name,
+          quantity: l.quantity,
+          unitPrice: l.unitPrice,
+          unitCost: l.unitCost,
+          discountPercent: l.discountPercent,
+          effectiveCeiling: l.effectiveCeiling,
+          isRecurring: l.isRecurring,
+          billingFrequency: l.billingFrequency,
+        })),
+      };
+
+      const res = await fetch(`${siteConfig.apiUrl}/api/v1/quotations`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+        keepalive: true,
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          const serverQuote: QuotationRecord = {
+            ...json.data,
+            approvalStage: json.data.approvalStage || (json.data.status === "IN_REVIEW" ? "SALES_MANAGER" : undefined),
+            auditTrail: json.data.auditTrail || [],
+          };
+          setQuotations((prev) => [
+            serverQuote,
+            ...prev.filter((q) => q.id !== quote.id && q.id !== serverQuote.id),
+          ]);
+          return serverQuote;
+        }
+      } else {
+        console.warn(`Quotation create API returned HTTP ${res.status}`);
+      }
+    } catch (err) {
+      console.warn("Notice: Failed to persist new quotation to backend:", err);
+    }
   }, []);
 
-  const updateQuotation = useCallback((quote: QuotationRecord) => {
+  const updateQuotation = useCallback(async (quote: QuotationRecord) => {
+    // 1. Optimistic local state update
     setQuotations((prev) =>
       prev.map((q) => (q.id === quote.id ? quote : q))
     );
+
+    // 2. Persist to PostgreSQL backend API
+    try {
+      const token =
+        typeof window !== "undefined"
+          ? localStorage.getItem("dealorbit_token") ||
+            document.cookie
+              .split("; ")
+              .find((row) => row.startsWith("dealorbit_token="))
+              ?.split("=")[1]
+          : undefined;
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      } else {
+        headers["Authorization"] = `Bearer demo_token_sales_rep`;
+      }
+
+      const payload = {
+        quoteNumber: quote.id,
+        customerId: quote.customerId,
+        customerName: quote.customerName,
+        status: quote.status,
+        paymentTerms: quote.paymentTerms,
+        subtotalAmount: quote.subtotalAmount,
+        discountAmount: quote.discountAmount,
+        taxAmount: quote.taxAmount,
+        totalAmount: quote.totalAmount,
+        blendedMargin: quote.blendedMargin,
+        riskScore: quote.riskScore,
+        lines: quote.lines.map((l) => ({
+          productId: l.productId,
+          sku: l.sku,
+          name: l.name,
+          quantity: l.quantity,
+          unitPrice: l.unitPrice,
+          unitCost: l.unitCost,
+          discountPercent: l.discountPercent,
+          effectiveCeiling: l.effectiveCeiling,
+          isRecurring: l.isRecurring,
+          billingFrequency: l.billingFrequency,
+        })),
+      };
+
+      const res = await fetch(`${siteConfig.apiUrl}/api/v1/quotations/${encodeURIComponent(quote.id)}`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify(payload),
+        keepalive: true,
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          const serverQuote: QuotationRecord = {
+            ...json.data,
+            approvalStage: json.data.approvalStage || (json.data.status === "IN_REVIEW" ? "SALES_MANAGER" : undefined),
+            auditTrail: json.data.auditTrail || [],
+          };
+          setQuotations((prev) =>
+            prev.map((q) => (q.id === quote.id || q.id === serverQuote.id ? serverQuote : q))
+          );
+          return serverQuote;
+        }
+      } else {
+        console.warn(`Quotation update API returned HTTP ${res.status}`);
+      }
+    } catch (err) {
+      console.warn("Notice: Failed to persist quotation update to backend:", err);
+    }
   }, []);
 
   const getQuotation = useCallback(

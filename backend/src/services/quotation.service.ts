@@ -4,6 +4,7 @@ import { prisma } from '../config/database';
 import { governanceService, DEFAULT_CUSTOMER_TIER_CEILINGS } from './governance.service';
 import { AppError } from '../utils/appError';
 import { IAuthUser } from '../types';
+import { randomUUID } from 'crypto';
 
 function formatAuditTimestamp(date: Date): string {
   const now = new Date();
@@ -410,6 +411,399 @@ export class QuotationService {
         createdAt: t.createdAt.toISOString(),
       })),
     };
+  }
+
+  /**
+   * Create a new quotation with lines, calculation, governance approval, and audit logs
+   */
+  public async createQuotation(data: any, user?: IAuthUser) {
+    // 1. Resolve Customer
+    let customer: any = null;
+    if (data.customerId) {
+      customer = await prisma.customer.findUnique({ where: { id: data.customerId } });
+    }
+    if (!customer && (data.customerId || data.customerName)) {
+      customer = await prisma.customer.findFirst({
+        where: {
+          OR: [
+            { code: { equals: data.customerId || '', mode: 'insensitive' } },
+            { name: { equals: data.customerName || data.customerId, mode: 'insensitive' } },
+            { name: { contains: data.customerName || '', mode: 'insensitive' } },
+          ],
+        },
+      });
+    }
+    if (!customer) {
+      customer = await prisma.customer.findFirst();
+    }
+    if (!customer) {
+      throw new AppError('No customer record available to associate with quotation', 400);
+    }
+
+    // 2. Resolve Sales Rep
+    let salesRepId: string | null = null;
+    if (user?.id) {
+      const userExists = await prisma.user.findUnique({ where: { id: user.id } });
+      if (userExists) salesRepId = userExists.id;
+    }
+    if (!salesRepId) {
+      const rep = await prisma.user.findFirst({ where: { role: 'SALES_REP' } });
+      salesRepId = rep?.id || (await prisma.user.findFirst())?.id || '';
+    }
+    if (!salesRepId) {
+      throw new AppError('No sales representative available to assign to quotation', 400);
+    }
+
+    // 3. Resolve Quote Number
+    let quoteNumber = data.quoteNumber || data.id;
+    if (quoteNumber) {
+      const existing = await prisma.quotation.findUnique({ where: { quoteNumber } });
+      if (existing) {
+        quoteNumber = null;
+      }
+    }
+    if (!quoteNumber) {
+      const quotes = await prisma.quotation.findMany({ select: { quoteNumber: true } });
+      const numbers = quotes
+        .map((q) => {
+          const match = q.quoteNumber.match(/\d+$/);
+          return match ? parseInt(match[0], 10) : 0;
+        })
+        .filter((n) => !isNaN(n));
+      const nextNum = numbers.length > 0 ? Math.max(...numbers) + 1 : 49;
+      quoteNumber = `QT-2026-${String(nextNum).padStart(4, '0')}`;
+    }
+
+    // 4. Map & calculate line items
+    const rawLines = Array.isArray(data.lines) ? data.lines : [];
+    const allProducts = await prisma.product.findMany({ include: { category: true } });
+    const tierCeiling = DEFAULT_CUSTOMER_TIER_CEILINGS[customer.tier as CustomerTier] || 15.0;
+
+    let subtotalAmount = 0;
+    let totalDiscountAmount = 0;
+    let totalCostBasis = 0;
+
+    const mappedLines: any[] = [];
+    for (const rawLine of rawLines) {
+      let matchedProd = allProducts.find(
+        (p) =>
+          p.id === rawLine.productId ||
+          p.sku.toLowerCase() === (rawLine.sku || '').toLowerCase() ||
+          p.name.toLowerCase() === (rawLine.name || '').toLowerCase()
+      );
+      if (!matchedProd && allProducts.length > 0) {
+        matchedProd = allProducts[0];
+      }
+      if (!matchedProd) continue;
+
+      const qty = Number(rawLine.quantity) || 1;
+      const unitPrice = Number(rawLine.unitPrice ?? matchedProd.basePrice);
+      const unitCost = Number(rawLine.unitCost ?? (matchedProd as any).costPrice ?? (matchedProd as any).costBasis ?? 0);
+      const discountPercent = Number(rawLine.discountPercent ?? 0);
+      const effectiveCeiling = Number(rawLine.effectiveCeiling ?? tierCeiling);
+      const isViolation = discountPercent > effectiveCeiling;
+      const violationPoints = isViolation ? discountPercent - effectiveCeiling : 0;
+      const netPerUnit = unitPrice * (1 - discountPercent / 100);
+      const netLinePrice = netPerUnit * qty;
+      const lineCostTotal = unitCost * qty;
+      const lineMarginPercent =
+        netLinePrice > 0 ? ((netLinePrice - lineCostTotal) / netLinePrice) * 100 : 0;
+
+      subtotalAmount += unitPrice * qty;
+      totalDiscountAmount += (unitPrice - netPerUnit) * qty;
+      totalCostBasis += lineCostTotal;
+
+      mappedLines.push({
+        productId: matchedProd.id,
+        quantity: qty,
+        unitPrice,
+        unitCost,
+        discountPercent,
+        effectiveCeiling,
+        isViolation,
+        violationPoints,
+        netLinePrice: parseFloat(netLinePrice.toFixed(2)),
+        lineMarginPercent: parseFloat(lineMarginPercent.toFixed(2)),
+        isRecurring: Boolean(rawLine.isRecurring),
+        billingFrequency: rawLine.billingFrequency || 'ONE_TIME',
+      });
+    }
+
+    if (subtotalAmount === 0 && data.subtotalAmount) {
+      subtotalAmount = Number(data.subtotalAmount);
+    }
+    if (totalDiscountAmount === 0 && data.discountAmount) {
+      totalDiscountAmount = Number(data.discountAmount);
+    }
+
+    const netTotal = subtotalAmount - totalDiscountAmount;
+    const taxAmount = data.taxAmount !== undefined ? Number(data.taxAmount) : parseFloat((netTotal * 0.18).toFixed(2));
+    const grandTotal = data.totalAmount !== undefined ? Number(data.totalAmount) : parseFloat((netTotal + taxAmount).toFixed(2));
+    const dealMarginPercent =
+      data.blendedMargin !== undefined
+        ? Number(data.blendedMargin)
+        : netTotal > 0
+        ? parseFloat((((netTotal - totalCostBasis) / netTotal) * 100).toFixed(2))
+        : 18.0;
+
+    const hasViolation = mappedLines.some((l) => l.isViolation);
+    const calculatedRiskScore =
+      data.riskScore !== undefined
+        ? Number(data.riskScore)
+        : hasViolation || dealMarginPercent < 15
+        ? 45.0
+        : 15.0;
+
+    const requestedStatus = (data.status as QuoteStatus) || (hasViolation ? 'IN_REVIEW' : 'DRAFT');
+    const paymentTerms = data.paymentTerms || customer.paymentTerms || 'Net 30';
+    const portalToken = data.portalToken || randomUUID();
+    const portalTokenExpiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+    const expiresAt = data.expiresAt ? new Date(data.expiresAt) : portalTokenExpiresAt;
+
+    // 5. Persist to PostgreSQL in Transaction
+    const createdQuote = await prisma.$transaction(async (tx) => {
+      const q = await tx.quotation.create({
+        data: {
+          quoteNumber,
+          version: 1,
+          customerId: customer.id,
+          salesRepId,
+          status: requestedStatus,
+          paymentTerms,
+          subtotalAmount: parseFloat(subtotalAmount.toFixed(2)),
+          totalDiscountAmount: parseFloat(totalDiscountAmount.toFixed(2)),
+          taxAmount,
+          grandTotal,
+          totalCostBasis: parseFloat(totalCostBasis.toFixed(2)),
+          dealMarginPercent,
+          blendedRiskScore: calculatedRiskScore,
+          portalToken,
+          portalTokenExpiresAt,
+          expiresAt,
+          lines: {
+            create: mappedLines,
+          },
+        },
+      });
+
+      // Governance chain creation if review required
+      if (requestedStatus === 'IN_REVIEW') {
+        const isDual = calculatedRiskScore > 50 || dealMarginPercent < 18;
+        const manager = await tx.user.findFirst({ where: { role: 'SALES_MANAGER' } });
+        await tx.approvalRequest.create({
+          data: {
+            quotationId: q.id,
+            approverId: manager?.id,
+            tierLevel: 1,
+            status: 'PENDING',
+          },
+        });
+
+        if (isDual) {
+          const finance = await tx.user.findFirst({ where: { role: 'FINANCE_OPS' } });
+          await tx.approvalRequest.create({
+            data: {
+              quotationId: q.id,
+              approverId: finance?.id,
+              tierLevel: 2,
+              status: 'PENDING',
+            },
+          });
+        }
+      }
+
+      // Audit Log
+      await tx.auditLog.create({
+        data: {
+          quotationId: q.id,
+          actorId: salesRepId,
+          action: requestedStatus === 'IN_REVIEW' ? 'SUBMITTED' : 'QUOTE_CREATED',
+          newState: requestedStatus,
+          reason:
+            requestedStatus === 'IN_REVIEW'
+              ? 'Quotation submitted for governance review via Quotation Builder.'
+              : 'Quotation draft created via Quotation Builder.',
+          metadataJson: {
+            subtotal: subtotalAmount,
+            grandTotal,
+            blendedMargin: dealMarginPercent,
+            riskScore: calculatedRiskScore,
+            actorName: user?.name || 'Sales Representative',
+            actorRole: user?.role || 'SALES_REP',
+            timestamp: formatAuditTimestamp(new Date()),
+          },
+        },
+      });
+
+      return q;
+    });
+
+    return this.getQuotationById(createdQuote.id);
+  }
+
+  /**
+   * Update existing quotation with new lines, calculations, optimistic lock, and audit trail
+   */
+  public async updateQuotation(idOrQuoteNumber: string, data: any, user?: IAuthUser) {
+    let existing = await quotationRepository.findByQuoteNumber(idOrQuoteNumber);
+    if (!existing) {
+      existing = await quotationRepository.findById(idOrQuoteNumber);
+    }
+
+    // If quotation doesn't exist in the database yet, initialize and create it
+    if (!existing) {
+      return this.createQuotation({ ...data, quoteNumber: idOrQuoteNumber }, user);
+    }
+
+    const rawLines = Array.isArray(data.lines) ? data.lines : [];
+    const allProducts = await prisma.product.findMany({ include: { category: true } });
+    const tierCeiling = DEFAULT_CUSTOMER_TIER_CEILINGS[existing.customer?.tier as CustomerTier] || 15.0;
+
+    let subtotalAmount = 0;
+    let totalDiscountAmount = 0;
+    let totalCostBasis = 0;
+
+    const mappedLines: any[] = [];
+    for (const rawLine of rawLines) {
+      let matchedProd = allProducts.find(
+        (p) =>
+          p.id === rawLine.productId ||
+          p.sku.toLowerCase() === (rawLine.sku || '').toLowerCase() ||
+          p.name.toLowerCase() === (rawLine.name || '').toLowerCase()
+      );
+      if (!matchedProd && allProducts.length > 0) {
+        matchedProd = allProducts[0];
+      }
+      if (!matchedProd) continue;
+
+      const qty = Number(rawLine.quantity) || 1;
+      const unitPrice = Number(rawLine.unitPrice ?? matchedProd.basePrice);
+      const unitCost = Number(rawLine.unitCost ?? (matchedProd as any).costPrice ?? (matchedProd as any).costBasis ?? 0);
+      const discountPercent = Number(rawLine.discountPercent ?? 0);
+      const effectiveCeiling = Number(rawLine.effectiveCeiling ?? tierCeiling);
+      const isViolation = discountPercent > effectiveCeiling;
+      const violationPoints = isViolation ? discountPercent - effectiveCeiling : 0;
+      const netPerUnit = unitPrice * (1 - discountPercent / 100);
+      const netLinePrice = netPerUnit * qty;
+      const lineCostTotal = unitCost * qty;
+      const lineMarginPercent =
+        netLinePrice > 0 ? ((netLinePrice - lineCostTotal) / netLinePrice) * 100 : 0;
+
+      subtotalAmount += unitPrice * qty;
+      totalDiscountAmount += (unitPrice - netPerUnit) * qty;
+      totalCostBasis += lineCostTotal;
+
+      mappedLines.push({
+        quotationId: existing.id,
+        productId: matchedProd.id,
+        quantity: qty,
+        unitPrice,
+        unitCost,
+        discountPercent,
+        effectiveCeiling,
+        isViolation,
+        violationPoints,
+        netLinePrice: parseFloat(netLinePrice.toFixed(2)),
+        lineMarginPercent: parseFloat(lineMarginPercent.toFixed(2)),
+        isRecurring: Boolean(rawLine.isRecurring),
+        billingFrequency: rawLine.billingFrequency || 'ONE_TIME',
+      });
+    }
+
+    if (subtotalAmount === 0 && data.subtotalAmount) {
+      subtotalAmount = Number(data.subtotalAmount);
+    }
+    if (totalDiscountAmount === 0 && data.discountAmount) {
+      totalDiscountAmount = Number(data.discountAmount);
+    }
+
+    const netTotal = subtotalAmount - totalDiscountAmount;
+    const taxAmount = data.taxAmount !== undefined ? Number(data.taxAmount) : parseFloat((netTotal * 0.18).toFixed(2));
+    const grandTotal = data.totalAmount !== undefined ? Number(data.totalAmount) : parseFloat((netTotal + taxAmount).toFixed(2));
+    const dealMarginPercent =
+      data.blendedMargin !== undefined
+        ? Number(data.blendedMargin)
+        : netTotal > 0
+        ? parseFloat((((netTotal - totalCostBasis) / netTotal) * 100).toFixed(2))
+        : Number(existing.dealMarginPercent);
+
+    const hasViolation = mappedLines.some((l) => l.isViolation);
+    const calculatedRiskScore =
+      data.riskScore !== undefined
+        ? Number(data.riskScore)
+        : hasViolation || dealMarginPercent < 15
+        ? 45.0
+        : 15.0;
+
+    const nextStatus = (data.status as QuoteStatus) || existing.status;
+    const paymentTerms = data.paymentTerms || existing.paymentTerms;
+
+    let actorId = existing.salesRepId;
+    if (user?.id) {
+      const userExists = await prisma.user.findUnique({ where: { id: user.id } });
+      if (userExists) actorId = userExists.id;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      if (mappedLines.length > 0) {
+        await tx.quotationLine.deleteMany({ where: { quotationId: existing.id } });
+        await tx.quotationLine.createMany({ data: mappedLines });
+      }
+
+      await tx.quotation.update({
+        where: { id: existing.id },
+        data: {
+          version: { increment: 1 },
+          status: nextStatus,
+          paymentTerms,
+          subtotalAmount: parseFloat(subtotalAmount.toFixed(2)),
+          totalDiscountAmount: parseFloat(totalDiscountAmount.toFixed(2)),
+          taxAmount,
+          grandTotal,
+          dealMarginPercent,
+          blendedRiskScore: calculatedRiskScore,
+        },
+      });
+
+      if (nextStatus === 'IN_REVIEW') {
+        const pendingApproval = await tx.approvalRequest.findFirst({
+          where: { quotationId: existing.id, status: 'PENDING' },
+        });
+        if (!pendingApproval) {
+          const manager = await tx.user.findFirst({ where: { role: 'SALES_MANAGER' } });
+          await tx.approvalRequest.create({
+            data: {
+              quotationId: existing.id,
+              approverId: manager?.id,
+              tierLevel: 1,
+              status: 'PENDING',
+            },
+          });
+        }
+      }
+
+      await tx.auditLog.create({
+        data: {
+          quotationId: existing.id,
+          actorId,
+          action: nextStatus === 'IN_REVIEW' && existing.status !== 'IN_REVIEW' ? 'SUBMITTED' : 'QUOTE_MUTATED',
+          previousState: existing.status,
+          newState: nextStatus,
+          reason: data.notes || `Quotation terms updated via Quotation Builder.`,
+          metadataJson: {
+            subtotal: subtotalAmount,
+            grandTotal,
+            blendedMargin: dealMarginPercent,
+            riskScore: calculatedRiskScore,
+            actorName: user?.name || 'Sales Representative',
+            actorRole: user?.role || 'SALES_REP',
+            timestamp: formatAuditTimestamp(new Date()),
+          },
+        },
+      });
+    });
+
+    return this.getQuotationById(existing.id);
   }
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   ShieldAlert,
   ArrowRight,
+  ArrowLeft,
   Sparkles,
   Search,
   Package,
@@ -27,6 +28,8 @@ import {
   Info,
   RotateCw,
   RefreshCw,
+  Loader2,
+  Save,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRole } from "@/context/RoleContext";
@@ -45,6 +48,13 @@ export default function QuotationBuilder({ initialQuote }: QuotationBuilderProps
   const router = useRouter();
   const { activeUser } = useRole();
   const { addQuotation, updateQuotation, getNextQuoteId } = useQuotations();
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [lastSavedDraftAt, setLastSavedDraftAt] = useState<string | null>(null);
+
+  const isDirtyRef = useRef(false);
+  const hasSubmittedRef = useRef(false);
+  const isFirstRender = useRef(true);
 
   // 1. Customer Selection
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
@@ -422,26 +432,18 @@ export default function QuotationBuilder({ initialQuote }: QuotationBuilderProps
     return "₹" + val.toLocaleString("en-IN");
   };
 
-  // =========================================================================
-  // CONFIRMATION & MOVE TO APPROVAL OR FULFILLMENT
-  // =========================================================================
-  const handleConfirmQuotation = () => {
-    if (cartLines.length === 0) {
-      toast.error("Quotation cannot be empty", {
-        description: "Please add at least one product line before confirming.",
-      });
+  // Track modifications
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
       return;
     }
+    isDirtyRef.current = true;
+  }, [cartLines, selectedCustomerId, orderDiscountPercent]);
 
-    const routeType = financialTotals.isApprovalRequired ? "APPROVAL" : "FULFILLMENT";
-    const status = financialTotals.isApprovalRequired ? "IN_REVIEW" : "APPROVED";
-    const approvalRequirement = financialTotals.isApprovalRequired
-      ? financialTotals.calculatedRiskScore > 50
-        ? "DUAL_REQUIRED"
-        : "MANAGER_REQUIRED"
-      : "NONE";
-
-    const newRecord: QuotationRecord = {
+  // Construct draft record helper
+  const buildDraftRecord = useCallback((): QuotationRecord => {
+    return {
       id: quoteId,
       customerName: selectedCustomer.name,
       customerId: selectedCustomer.id,
@@ -458,35 +460,219 @@ export default function QuotationBuilder({ initialQuote }: QuotationBuilderProps
       blendedMargin: financialTotals.blendedMargin,
       marginStatus: financialTotals.marginStatus,
       riskScore: financialTotals.calculatedRiskScore,
-      status: status,
-      approvalRequirement: approvalRequirement,
+      status: "DRAFT",
+      approvalRequirement: "NONE",
       repName: activeUser.name,
       updatedAt: "Just now",
       lines: cartLines,
       paymentTerms: selectedCustomer.paymentTerms,
     };
+  }, [
+    quoteId,
+    selectedCustomer,
+    cartLines,
+    financialTotals,
+    orderDiscountPercent,
+    activeUser.name,
+  ]);
 
-    if (initialQuote) {
-      updateQuotation(newRecord);
-      toast.success(`Quotation ${quoteId} updated`);
-    } else {
-      addQuotation(newRecord);
-      toast.success(`Quotation ${quoteId} created successfully`);
+  // Keep latest draft state in ref for safe unmount persistence
+  const latestDraftRef = useRef<QuotationRecord | null>(null);
+  useEffect(() => {
+    latestDraftRef.current = buildDraftRecord();
+  }, [buildDraftRecord]);
+
+  // Explicit Save as Draft action
+  const handleSaveAsDraft = async (showToast = true) => {
+    if (cartLines.length === 0 && !initialQuote) {
+      if (showToast) {
+        toast.error("Quotation cannot be empty", {
+          description: "Please add at least one product line before saving as draft.",
+        });
+      }
+      return;
     }
 
-    // Open confirmation feedback modal
-    setConfirmationModal({
-      isOpen: true,
-      quoteId: quoteId,
-      routeType,
-      totalFormatted: formatCurrency(financialTotals.grandTotal),
-      blendedMargin: financialTotals.blendedMargin,
-      riskScore: financialTotals.calculatedRiskScore,
-    });
+    setIsSavingDraft(true);
+    try {
+      const draftRecord = buildDraftRecord();
+      if (initialQuote) {
+        await updateQuotation(draftRecord);
+      } else {
+        await addQuotation(draftRecord);
+      }
+      isDirtyRef.current = false;
+      const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      setLastSavedDraftAt(timeStr);
+      if (showToast) {
+        toast.success(`Quotation ${quoteId} saved as draft in database`);
+      }
+    } catch (err: any) {
+      if (showToast) {
+        toast.error("Failed to save draft", {
+          description: err?.message || "Could not persist draft to database.",
+        });
+      }
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
+
+  // Back navigation with auto-save as draft
+  const handleBackToQuotations = async () => {
+    if (!hasSubmittedRef.current && (isDirtyRef.current || !initialQuote) && cartLines.length > 0) {
+      setIsSavingDraft(true);
+      try {
+        const draftRecord = buildDraftRecord();
+        if (initialQuote) {
+          await updateQuotation(draftRecord);
+        } else {
+          await addQuotation(draftRecord);
+        }
+        isDirtyRef.current = false;
+        toast.info(`Quotation ${quoteId} automatically saved as draft`);
+      } catch (err) {
+        console.warn("Could not save draft on back navigation:", err);
+      } finally {
+        setIsSavingDraft(false);
+      }
+    }
+    router.push("/quotations");
+  };
+
+  // Auto-save on unmount (e.g. sidebar navigation or browser back)
+  useEffect(() => {
+    return () => {
+      if (!hasSubmittedRef.current && (isDirtyRef.current || !initialQuote) && latestDraftRef.current && latestDraftRef.current.lines.length > 0) {
+        if (initialQuote) {
+          updateQuotation(latestDraftRef.current);
+        } else {
+          addQuotation(latestDraftRef.current);
+        }
+      }
+    };
+  }, [initialQuote, addQuotation, updateQuotation]);
+
+  // =========================================================================
+  // CONFIRMATION & MOVE TO APPROVAL OR FULFILLMENT
+  // =========================================================================
+  const handleConfirmQuotation = async () => {
+    if (cartLines.length === 0) {
+      toast.error("Quotation cannot be empty", {
+        description: "Please add at least one product line before confirming.",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const routeType = financialTotals.isApprovalRequired ? "APPROVAL" : "FULFILLMENT";
+      const status = financialTotals.isApprovalRequired ? "IN_REVIEW" : "APPROVED";
+      const approvalRequirement = financialTotals.isApprovalRequired
+        ? financialTotals.calculatedRiskScore > 50
+          ? "DUAL_REQUIRED"
+          : "MANAGER_REQUIRED"
+        : "NONE";
+
+      const newRecord: QuotationRecord = {
+        id: quoteId,
+        customerName: selectedCustomer.name,
+        customerId: selectedCustomer.id,
+        tier: selectedCustomer.tier,
+        tierCeiling: selectedCustomer.tierCeilings.HARDWARE,
+        lineItemsCount: cartLines.length,
+        subtotal: formatCurrency(financialTotals.grossSubtotal),
+        subtotalAmount: financialTotals.grossSubtotal,
+        discountAmount: financialTotals.totalDiscounts,
+        orderDiscountPercent: orderDiscountPercent,
+        taxAmount: financialTotals.taxAmount,
+        total: formatCurrency(financialTotals.grandTotal),
+        totalAmount: financialTotals.grandTotal,
+        blendedMargin: financialTotals.blendedMargin,
+        marginStatus: financialTotals.marginStatus,
+        riskScore: financialTotals.calculatedRiskScore,
+        status: status,
+        approvalRequirement: approvalRequirement,
+        repName: activeUser.name,
+        updatedAt: "Just now",
+        lines: cartLines,
+        paymentTerms: selectedCustomer.paymentTerms,
+      };
+
+      if (initialQuote) {
+        await updateQuotation(newRecord);
+        toast.success(`Quotation ${quoteId} updated`);
+      } else {
+        await addQuotation(newRecord);
+        toast.success(`Quotation ${quoteId} saved to database successfully`);
+      }
+
+      hasSubmittedRef.current = true;
+      isDirtyRef.current = false;
+
+      // Open confirmation feedback modal
+      setConfirmationModal({
+        isOpen: true,
+        quoteId: quoteId,
+        routeType,
+        totalFormatted: formatCurrency(financialTotals.grandTotal),
+        blendedMargin: financialTotals.blendedMargin,
+        riskScore: financialTotals.calculatedRiskScore,
+      });
+    } catch (err: any) {
+      toast.error("Failed to save quotation", {
+        description: err?.message || "An unexpected error occurred while saving to the database.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
     <div className="space-y-6">
+      {/* 0. Top Back Navigation & Autosave Strip */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-[var(--card)] px-4 py-2.5 rounded-xl border border-[var(--border)]">
+        <button
+          type="button"
+          onClick={handleBackToQuotations}
+          className="inline-flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] font-medium transition-colors cursor-pointer"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Back to Quotations</span>
+        </button>
+
+        <div className="flex items-center gap-3">
+          {isSavingDraft ? (
+            <span className="text-[11px] text-[var(--text-muted)] flex items-center gap-1">
+              <Loader2 className="w-3 h-3 animate-spin text-[var(--primary)]" />
+              Saving draft to database...
+            </span>
+          ) : lastSavedDraftAt ? (
+            <span className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
+              <CheckCircle2 className="w-3 h-3" />
+              Draft saved at {lastSavedDraftAt}
+            </span>
+          ) : (
+            <span className="text-[11px] text-[var(--text-muted)]">
+              Automatically saved as draft when you leave
+            </span>
+          )}
+
+          <button
+            type="button"
+            onClick={() => handleSaveAsDraft(true)}
+            disabled={cartLines.length === 0 || isSavingDraft || isSaving}
+            className="btn-outline text-xs py-1.5 px-3 flex items-center gap-1.5 rounded-lg cursor-pointer disabled:opacity-50"
+          >
+            {isSavingDraft ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Save className="w-3.5 h-3.5" />
+            )}
+            <span>Save Draft</span>
+          </button>
+        </div>
+      </div>
       {/* 1. Top Header & Metadata Strip */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--card)] p-5 rounded-2xl border border-[var(--border)] shadow-xs">
         <div>
@@ -1145,29 +1331,50 @@ export default function QuotationBuilder({ initialQuote }: QuotationBuilderProps
               </div>
             </div>
 
-            {/* DYNAMIC CONFIRMATION ACTION BUTTON */}
-            <button
-              type="button"
-              onClick={handleConfirmQuotation}
-              disabled={cartLines.length === 0}
-              className={`w-full py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-                financialTotals.isApprovalRequired
-                  ? "bg-amber-600 hover:bg-amber-700 text-white"
-                  : "bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-white"
-              }`}
-            >
-              {financialTotals.isApprovalRequired ? (
-                <>
-                  <ShieldAlert className="w-4 h-4" />
-                  <span>Confirm & Submit for Approval</span>
-                </>
-              ) : (
-                <>
-                  <Truck className="w-4 h-4" />
-                  <span>Confirm & Move Straight to Fulfillment</span>
-                </>
-              )}
-            </button>
+            {/* ACTION BUTTONS: SAVE DRAFT & CONFIRM */}
+            <div className="flex flex-col sm:flex-row items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => handleSaveAsDraft(true)}
+                disabled={cartLines.length === 0 || isSavingDraft || isSaving}
+                className="w-full sm:w-auto btn-outline py-3 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSavingDraft ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                <span>Save as Draft</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleConfirmQuotation}
+                disabled={cartLines.length === 0 || isSaving || isSavingDraft}
+                className={`flex-1 w-full py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                  financialTotals.isApprovalRequired
+                    ? "bg-amber-600 hover:bg-amber-700 text-white"
+                    : "bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-white"
+                }`}
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Saving to Database...</span>
+                  </>
+                ) : financialTotals.isApprovalRequired ? (
+                  <>
+                    <ShieldAlert className="w-4 h-4" />
+                    <span>Confirm & Submit for Approval</span>
+                  </>
+                ) : (
+                  <>
+                    <Truck className="w-4 h-4" />
+                    <span>Confirm & Move Straight to Fulfillment</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>

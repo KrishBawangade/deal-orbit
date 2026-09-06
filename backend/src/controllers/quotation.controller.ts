@@ -38,6 +38,16 @@ export class QuotationController {
     const portalQuote = await this.service.getQuotationByPortalToken(req.params.portalToken);
     sendSuccess(res, portalQuote, 'Customer portal quotation retrieved successfully', 200);
   });
+
+  public createQuotation = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const quotation = await this.service.createQuotation(req.body, req.user);
+    sendSuccess(res, quotation, 'Quotation created successfully', 201);
+  });
+
+  public updateQuotation = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const quotation = await this.service.updateQuotation(req.params.id, req.body, req.user);
+    sendSuccess(res, quotation, 'Quotation updated successfully', 200);
+  });
 }
 
 export const quotationController = new QuotationController();

@@ -21,16 +21,6 @@ export default function QuotationDetailPage({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Link
-          href="/quotations"
-          className="text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] flex items-center gap-1 transition-colors"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to Quotations</span>
-        </Link>
-      </div>
-
       <QuotationBuilder initialQuote={existingQuote} />
     </div>
   );
