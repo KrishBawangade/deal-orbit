@@ -19,6 +19,7 @@ import {
 import { toast } from "sonner";
 import { siteConfig } from "@/config/site";
 import { IOrderItem } from "./FulfillmentSplitScreen";
+import { ShimmerBox } from "@/components/ui/Shimmer";
 
 const getAuthHeaders = (): Record<string, string> => {
   const token =
@@ -230,14 +231,22 @@ export default function FulfillmentOrdersList() {
         <div className="card-glass p-4 rounded-xl border border-[var(--border)]/70 flex items-center justify-between">
           <div className="space-y-1">
             <div className="text-xs text-[var(--text-muted)] font-medium">Orders in Queue</div>
-            <div className="text-2xl font-bold text-[var(--text-main)] font-heading">
-              {isLoading ? "..." : `${totalOrdersCount} Orders`}
-            </div>
-            <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-              {isLoading ? "Fetching..." : `${pendingCount} Awaiting Allocation`}
-            </div>
+            {isLoading ? (
+              <ShimmerBox className="h-7 w-24 my-1 rounded-md" />
+            ) : (
+              <div className="text-2xl font-bold text-[var(--text-main)] font-heading">
+                {totalOrdersCount} Orders
+              </div>
+            )}
+            {isLoading ? (
+              <ShimmerBox className="h-3 w-32 mt-1 rounded" />
+            ) : (
+              <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                {pendingCount} Awaiting Allocation
+              </div>
+            )}
           </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
             <Boxes className="w-5 h-5" />
           </div>
         </div>
@@ -246,14 +255,22 @@ export default function FulfillmentOrdersList() {
         <div className="card-glass p-4 rounded-xl border border-[var(--border)]/70 flex items-center justify-between">
           <div className="space-y-1">
             <div className="text-xs text-[var(--text-muted)] font-medium">Pending Split</div>
-            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400 font-heading">
-              {isLoading ? "..." : `${pendingCount} Orders`}
-            </div>
-            <div className="text-[11px] text-[var(--text-muted)]">
-              Requires warehouse allocation
-            </div>
+            {isLoading ? (
+              <ShimmerBox className="h-7 w-24 my-1 rounded-md" />
+            ) : (
+              <div className="text-2xl font-bold text-amber-600 dark:text-amber-400 font-heading">
+                {pendingCount} Orders
+              </div>
+            )}
+            {isLoading ? (
+              <ShimmerBox className="h-3 w-32 mt-1 rounded" />
+            ) : (
+              <div className="text-[11px] text-[var(--text-muted)]">
+                Requires warehouse allocation
+              </div>
+            )}
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
             <Clock className="w-5 h-5" />
           </div>
         </div>
@@ -262,14 +279,22 @@ export default function FulfillmentOrdersList() {
         <div className="card-glass p-4 rounded-xl border border-[var(--border)]/70 flex items-center justify-between">
           <div className="space-y-1">
             <div className="text-xs text-[var(--text-muted)] font-medium">Active Dispatch</div>
-            <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 font-heading">
-              {isLoading ? "..." : `${processingCount + fulfilledCount} Active`}
-            </div>
-            <div className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium">
-              {processingCount} Processing, {fulfilledCount} Fulfilled
-            </div>
+            {isLoading ? (
+              <ShimmerBox className="h-7 w-24 my-1 rounded-md" />
+            ) : (
+              <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 font-heading">
+                {processingCount + fulfilledCount} Active
+              </div>
+            )}
+            {isLoading ? (
+              <ShimmerBox className="h-3 w-32 mt-1 rounded" />
+            ) : (
+              <div className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium">
+                {processingCount} Processing, {fulfilledCount} Fulfilled
+              </div>
+            )}
           </div>
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
             <Truck className="w-5 h-5" />
           </div>
         </div>
@@ -278,14 +303,22 @@ export default function FulfillmentOrdersList() {
         <div className="card-glass p-4 rounded-xl border border-[var(--border)]/70 flex items-center justify-between">
           <div className="space-y-1">
             <div className="text-xs text-[var(--text-muted)] font-medium">Fulfillment Pipeline Value</div>
-            <div className="text-2xl font-bold text-[var(--text-main)] font-heading">
-              {isLoading ? "..." : `₹${totalPipelineValue.toLocaleString("en-IN")}`}
-            </div>
-            <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-              Live from PostgreSQL
-            </div>
+            {isLoading ? (
+              <ShimmerBox className="h-7 w-28 my-1 rounded-md" />
+            ) : (
+              <div className="text-2xl font-bold text-[var(--text-main)] font-heading">
+                ₹{totalPipelineValue.toLocaleString("en-IN")}
+              </div>
+            )}
+            {isLoading ? (
+              <ShimmerBox className="h-3 w-32 mt-1 rounded" />
+            ) : (
+              <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                Live from PostgreSQL
+              </div>
+            )}
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
             <PackageCheck className="w-5 h-5" />
           </div>
         </div>
@@ -348,32 +381,32 @@ export default function FulfillmentOrdersList() {
             </thead>
             <tbody className="divide-y divide-[var(--border-subtle)]/70 text-[var(--text-body)]">
               {isLoading ? (
-                // Animated Loading Skeletons
+                // Shimmer Wave Skeletons
                 Array.from({ length: 5 }).map((_, idx) => (
-                  <tr key={idx} className="animate-pulse">
+                  <tr key={idx} className="border-b border-[var(--border-subtle)]/70">
                     <td className="px-4 py-4">
-                      <div className="h-4 w-28 bg-[var(--card-hover)] rounded" />
+                      <ShimmerBox className="h-4 w-28 rounded" />
+                    </td>
+                    <td className="px-4 py-4 space-y-1.5">
+                      <ShimmerBox className="h-4 w-32 rounded" />
+                      <ShimmerBox className="h-3 w-16 rounded" />
+                    </td>
+                    <td className="px-4 py-4 space-y-1.5">
+                      <ShimmerBox className="h-4 w-44 rounded" />
+                      <ShimmerBox className="h-3 w-24 rounded" />
+                    </td>
+                    <td className="px-4 py-4 space-y-1.5">
+                      <ShimmerBox className="h-4 w-32 rounded" />
+                      <ShimmerBox className="h-2 w-28 rounded" />
                     </td>
                     <td className="px-4 py-4">
-                      <div className="h-4 w-32 bg-[var(--card-hover)] rounded mb-1" />
-                      <div className="h-3 w-16 bg-[var(--card-hover)]/70 rounded" />
+                      <ShimmerBox className="h-4 w-20 rounded" />
                     </td>
                     <td className="px-4 py-4">
-                      <div className="h-4 w-44 bg-[var(--card-hover)] rounded mb-1" />
-                      <div className="h-3 w-24 bg-[var(--card-hover)]/70 rounded" />
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="h-4 w-32 bg-[var(--card-hover)] rounded mb-1" />
-                      <div className="h-2 w-28 bg-[var(--card-hover)]/70 rounded" />
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="h-4 w-20 bg-[var(--card-hover)] rounded" />
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="h-5 w-16 bg-[var(--card-hover)] rounded-full" />
+                      <ShimmerBox className="h-5 w-16 rounded-full" />
                     </td>
                     <td className="px-4 py-4 text-right">
-                      <div className="h-7 w-24 bg-[var(--card-hover)] rounded-lg ml-auto" />
+                      <ShimmerBox className="h-7 w-24 rounded-lg ml-auto" />
                     </td>
                   </tr>
                 ))

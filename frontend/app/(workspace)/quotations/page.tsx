@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRole } from "@/context/RoleContext";
@@ -20,18 +20,28 @@ import {
   TrendingUp,
   Layers,
   ChevronLeft,
+  RefreshCw,
 } from "lucide-react";
+import {
+  ShimmerBox,
+  QuotationsTableSkeleton,
+  QuotationsPaginationSkeleton,
+} from "@/components/quotations/QuotationsSkeleton";
 
 type FilterTabType = "ALL" | "DRAFT" | "IN_REVIEW" | "CUSTOMER_REVIEW" | "APPROVED" | "ACCEPTED" | "REJECTED";
 
 export default function QuotationsPage() {
   const router = useRouter();
   const { activeUser } = useRole();
-  const { quotations } = useQuotations();
+  const { quotations, isLoading, refetchQuotations } = useQuotations();
   const [filterTab, setFilterTab] = useState<FilterTabType>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 15;
+
+  useEffect(() => {
+    refetchQuotations();
+  }, [refetchQuotations]);
 
   const draftCount = quotations.filter((q) => q.status === "DRAFT").length;
   const inReviewCount = quotations.filter((q) => q.status === "IN_REVIEW").length;
@@ -85,6 +95,17 @@ export default function QuotationsPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => refetchQuotations()}
+            disabled={isLoading}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--card)] hover:bg-[var(--card-hover)] border border-[var(--border)] text-xs font-semibold text-[var(--text-main)] shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+            title="Refresh quotations data live from backend"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-[var(--primary)] ${isLoading ? "animate-spin" : ""}`} />
+            <span>{isLoading ? "Syncing..." : "Sync Data"}</span>
+          </button>
+
           {activeUser.role !== "FINANCE_OPS" && (
             <Link
               href="/quotations/new"
@@ -103,14 +124,22 @@ export default function QuotationsPage() {
         <div className="card-glass p-4 rounded-xl border border-[var(--border)]/70 flex items-center justify-between">
           <div className="space-y-1">
             <div className="text-xs text-[var(--text-muted)] font-medium">Active Quotations</div>
-            <div className="text-2xl font-bold text-[var(--text-main)] font-heading" suppressHydrationWarning>
-              {quotations.length} Deals
-            </div>
-            <div className="text-[11px] text-emerald-600 font-medium" suppressHydrationWarning>
-              {draftCount} Drafts, {inReviewCount} In Review
-            </div>
+            {isLoading ? (
+              <ShimmerBox className="h-7 w-24 my-1 rounded-md" />
+            ) : (
+              <div className="text-2xl font-bold text-[var(--text-main)] font-heading" suppressHydrationWarning>
+                {quotations.length} Deals
+              </div>
+            )}
+            {isLoading ? (
+              <ShimmerBox className="h-3 w-32 mt-1 rounded" />
+            ) : (
+              <div className="text-[11px] text-emerald-600 font-medium" suppressHydrationWarning>
+                {draftCount} Drafts, {inReviewCount} In Review
+              </div>
+            )}
           </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
             <FileText className="w-5 h-5" />
           </div>
         </div>
@@ -119,14 +148,22 @@ export default function QuotationsPage() {
         <div className="card-glass p-4 rounded-xl border border-[var(--border)]/70 flex items-center justify-between">
           <div className="space-y-1">
             <div className="text-xs text-[var(--text-muted)] font-medium">Weighted Pipeline Value</div>
-            <div className="text-2xl font-bold text-[var(--text-main)] font-heading" suppressHydrationWarning>
-              ₹{totalPipelineValue.toLocaleString("en-IN")}
-            </div>
-            <div className="text-[11px] text-emerald-600 font-medium" suppressHydrationWarning>
-              {quotations.length} Active Deals Tracked
-            </div>
+            {isLoading ? (
+              <ShimmerBox className="h-7 w-32 my-1 rounded-md" />
+            ) : (
+              <div className="text-2xl font-bold text-[var(--text-main)] font-heading" suppressHydrationWarning>
+                ₹{totalPipelineValue.toLocaleString("en-IN")}
+              </div>
+            )}
+            {isLoading ? (
+              <ShimmerBox className="h-3 w-28 mt-1 rounded" />
+            ) : (
+              <div className="text-[11px] text-emerald-600 font-medium" suppressHydrationWarning>
+                {quotations.length} Active Deals Tracked
+              </div>
+            )}
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
             <TrendingUp className="w-5 h-5" />
           </div>
         </div>
@@ -135,14 +172,22 @@ export default function QuotationsPage() {
         <div className="card-glass p-4 rounded-xl border border-[var(--border)]/70 flex items-center justify-between">
           <div className="space-y-1">
             <div className="text-xs text-[var(--text-muted)] font-medium">Blended Margin Floor</div>
-            <div className="text-2xl font-bold text-[var(--text-main)] font-heading" suppressHydrationWarning>
-              {avgMargin}%
-            </div>
-            <div className="text-[11px] text-emerald-600 font-medium">
-              Protected across tiers
-            </div>
+            {isLoading ? (
+              <ShimmerBox className="h-7 w-20 my-1 rounded-md" />
+            ) : (
+              <div className="text-2xl font-bold text-[var(--text-main)] font-heading" suppressHydrationWarning>
+                {avgMargin}%
+              </div>
+            )}
+            {isLoading ? (
+              <ShimmerBox className="h-3 w-28 mt-1 rounded" />
+            ) : (
+              <div className="text-[11px] text-emerald-600 font-medium">
+                Protected across tiers
+              </div>
+            )}
           </div>
-          <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
             <ShieldCheck className="w-5 h-5" />
           </div>
         </div>
@@ -151,12 +196,20 @@ export default function QuotationsPage() {
         <div className="card-glass p-4 rounded-xl border border-[var(--border)]/70 flex items-center justify-between">
           <div className="space-y-1">
             <div className="text-xs text-[var(--text-muted)] font-medium">Inventory Feasibility</div>
-            <div className="text-2xl font-bold text-[var(--text-main)] font-heading">100% Ready</div>
-            <div className="text-[11px] text-[var(--text-muted)]">
-              Main Central & East Hub
-            </div>
+            {isLoading ? (
+              <ShimmerBox className="h-7 w-28 my-1 rounded-md" />
+            ) : (
+              <div className="text-2xl font-bold text-[var(--text-main)] font-heading">100% Ready</div>
+            )}
+            {isLoading ? (
+              <ShimmerBox className="h-3 w-36 mt-1 rounded" />
+            ) : (
+              <div className="text-[11px] text-[var(--text-muted)]">
+                Main Central & East Hub
+              </div>
+            )}
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
             <Layers className="w-5 h-5" />
           </div>
         </div>
@@ -175,7 +228,7 @@ export default function QuotationsPage() {
                 : "text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--card)]"
             }`}
           >
-            All Deals ({quotations.length})
+            All Deals {isLoading ? <span className="inline-block w-4 h-3 rounded shimmer ml-1 align-middle opacity-70" /> : `(${quotations.length})`}
           </button>
 
           <button
@@ -187,7 +240,7 @@ export default function QuotationsPage() {
                 : "text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--card)]"
             }`}
           >
-            Drafts ({draftCount})
+            Drafts {isLoading ? <span className="inline-block w-4 h-3 rounded shimmer ml-1 align-middle opacity-70" /> : `(${draftCount})`}
           </button>
 
           <button
@@ -199,7 +252,7 @@ export default function QuotationsPage() {
                 : "text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--card)]"
             }`}
           >
-            Under Review ({inReviewCount})
+            Under Review {isLoading ? <span className="inline-block w-4 h-3 rounded shimmer ml-1 align-middle opacity-70" /> : `(${inReviewCount})`}
           </button>
 
           <button
@@ -211,7 +264,7 @@ export default function QuotationsPage() {
                 : "text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--card)]"
             }`}
           >
-            Client Review ({customerReviewCount})
+            Client Review {isLoading ? <span className="inline-block w-4 h-3 rounded shimmer ml-1 align-middle opacity-70" /> : `(${customerReviewCount})`}
           </button>
 
           <button
@@ -223,7 +276,7 @@ export default function QuotationsPage() {
                 : "text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--card)]"
             }`}
           >
-            Approved ({approvedCount})
+            Approved {isLoading ? <span className="inline-block w-4 h-3 rounded shimmer ml-1 align-middle opacity-70" /> : `(${approvedCount})`}
           </button>
 
           <button
@@ -235,7 +288,7 @@ export default function QuotationsPage() {
                 : "text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--card)]"
             }`}
           >
-            Converted ({acceptedCount})
+            Converted {isLoading ? <span className="inline-block w-4 h-3 rounded shimmer ml-1 align-middle opacity-70" /> : `(${acceptedCount})`}
           </button>
 
           <button
@@ -247,7 +300,7 @@ export default function QuotationsPage() {
                 : "text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--card)]"
             }`}
           >
-            Rejected ({rejectedCount})
+            Rejected {isLoading ? <span className="inline-block w-4 h-3 rounded shimmer ml-1 align-middle opacity-70" /> : `(${rejectedCount})`}
           </button>
         </div>
 
@@ -284,7 +337,9 @@ export default function QuotationsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border-subtle)]/70 text-[var(--text-body)]">
-              {paginatedQuotes.length === 0 ? (
+              {isLoading ? (
+                <QuotationsTableSkeleton rowCount={7} />
+              ) : paginatedQuotes.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-12 text-center text-[var(--text-muted)]">
                     <div className="flex flex-col items-center justify-center gap-2">
@@ -442,7 +497,9 @@ export default function QuotationsPage() {
         </div>
 
         {/* 4. Pagination Footer */}
-        {filteredQuotes.length > 0 && (
+        {isLoading ? (
+          <QuotationsPaginationSkeleton />
+        ) : filteredQuotes.length > 0 ? (
           <div className="px-4 py-3 border-t border-[var(--border-subtle)] bg-[var(--card)]/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--text-muted)]">
             <div>
               Showing <span className="font-semibold text-[var(--text-main)]">{(validCurrentPage - 1) * pageSize + 1}</span> to{" "}
@@ -476,7 +533,7 @@ export default function QuotationsPage() {
               </button>
             </div>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

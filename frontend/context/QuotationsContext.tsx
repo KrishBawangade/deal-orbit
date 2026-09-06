@@ -765,12 +765,13 @@ const STORAGE_KEY = "dealorbit_quotations_data_v5";
 export function QuotationsProvider({ children }: { children: React.ReactNode }) {
   const [quotations, setQuotations] = useState<QuotationRecord[]>(INITIAL_QUOTATIONS);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const refetchQuotations = useCallback(async (): Promise<QuotationRecord[] | undefined> => {
     setIsLoading(true);
     setError(null);
+    const minDelay = new Promise((resolve) => setTimeout(resolve, 500));
     try {
       const token =
         typeof window !== "undefined"
@@ -797,30 +798,30 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
         res = await fetch(`${siteConfig.apiUrl}/api/quotations`, {
           method: "GET",
           headers,
-        });
+        }).catch(() => null);
       }
 
-      if (!res.ok) {
-        throw new Error(`API responded with HTTP ${res.status}`);
-      }
-
-      const data = await res.json();
-      if (data.success && Array.isArray(data.data?.quotations)) {
-        const serverQuotes: QuotationRecord[] = data.data.quotations.map((q: any) => ({
-          ...q,
-          approvalStage: q.approvalStage || (q.status === "IN_REVIEW" ? "SALES_MANAGER" : undefined),
-          auditTrail: q.auditTrail || [],
-        }));
-        setQuotations(serverQuotes);
-        if (typeof window !== "undefined") {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(serverQuotes));
+      if (res && res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.data?.quotations)) {
+          const serverQuotes: QuotationRecord[] = data.data.quotations.map((q: any) => ({
+            ...q,
+            approvalStage: q.approvalStage || (q.status === "IN_REVIEW" ? "SALES_MANAGER" : undefined),
+            auditTrail: q.auditTrail || [],
+          }));
+          setQuotations(serverQuotes);
+          if (typeof window !== "undefined") {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(serverQuotes));
+          }
+          await minDelay;
+          return serverQuotes;
         }
-        setIsLoading(false);
-        return serverQuotes;
       }
+      await minDelay;
     } catch (err: any) {
       console.warn("Quotation API fetch notice (using cache/default):", err?.message);
       setError(err?.message || "Failed to fetch quotations");
+      await minDelay;
     } finally {
       setIsLoading(false);
     }

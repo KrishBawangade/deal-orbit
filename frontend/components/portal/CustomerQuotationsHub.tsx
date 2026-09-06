@@ -22,6 +22,7 @@ import {
   Info,
 } from "lucide-react";
 import { useQuotations, QuotationRecord } from "@/context/QuotationsContext";
+import { ShimmerBox, ShimmerPill } from "@/components/ui/Shimmer";
 
 interface CustomerQuotationsHubProps {
   customerToken: string;
@@ -34,7 +35,7 @@ export default function CustomerQuotationsHub({
   customerToken,
   onSelectQuote,
 }: CustomerQuotationsHubProps) {
-  const { quotations, getQuotationsByCustomer } = useQuotations();
+  const { quotations, isLoading, getQuotationsByCustomer } = useQuotations();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
 
@@ -236,6 +237,12 @@ export default function CustomerQuotationsHub({
           className={`cursor-pointer rounded-xl border p-4 transition-all ${
             statusFilter === "ALL"
               ? "bg-[var(--card)] border-[var(--primary)] ring-2 ring-[var(--primary)]/20 shadow-xs"
+        {/* Total Quotes */}
+        <div
+          onClick={() => setStatusFilter("ALL")}
+          className={`cursor-pointer rounded-xl border p-4 transition-all ${
+            statusFilter === "ALL"
+              ? "bg-[var(--card)] border-[var(--primary)] ring-2 ring-[var(--primary)]/20 shadow-xs"
               : "bg-[var(--card)] border-[var(--border)] hover:border-[var(--primary)]/40"
           }`}
         >
@@ -243,9 +250,13 @@ export default function CustomerQuotationsHub({
             <span className="font-semibold">All Proposals</span>
             <FileText className="w-4 h-4 text-[var(--primary)]" />
           </div>
-          <div className="mt-2 text-2xl font-bold font-mono text-[var(--text-main)]">
-            {stats.total}
-          </div>
+          {isLoading ? (
+            <ShimmerBox className="h-8 w-16 rounded-md mt-2" />
+          ) : (
+            <div className="mt-2 text-2xl font-bold font-mono text-[var(--text-main)]">
+              {stats.total}
+            </div>
+          )}
           <p className="text-[11px] text-[var(--text-muted)] mt-1">Active proposals on record</p>
         </div>
 
@@ -262,9 +273,13 @@ export default function CustomerQuotationsHub({
             <span className="font-semibold">Action Required</span>
             <Clock className="w-4 h-4 text-amber-700" />
           </div>
-          <div className="mt-2 text-2xl font-bold font-mono text-amber-700">
-            {stats.inReview}
-          </div>
+          {isLoading ? (
+            <ShimmerBox className="h-8 w-16 rounded-md mt-2" />
+          ) : (
+            <div className="mt-2 text-2xl font-bold font-mono text-amber-700">
+              {stats.inReview}
+            </div>
+          )}
           <p className="text-[11px] text-[var(--text-muted)] mt-1">Ready for review & counter-offer</p>
         </div>
 
@@ -281,9 +296,13 @@ export default function CustomerQuotationsHub({
             <span className="font-semibold">Approved Terms</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-700" />
           </div>
-          <div className="mt-2 text-2xl font-bold font-mono text-emerald-700">
-            {stats.approved}
-          </div>
+          {isLoading ? (
+            <ShimmerBox className="h-8 w-16 rounded-md mt-2" />
+          ) : (
+            <div className="mt-2 text-2xl font-bold font-mono text-emerald-700">
+              {stats.approved}
+            </div>
+          )}
           <p className="text-[11px] text-[var(--text-muted)] mt-1">Cleared for electronic signature</p>
         </div>
 
@@ -300,9 +319,13 @@ export default function CustomerQuotationsHub({
             <span className="font-semibold">Executed Agreements</span>
             <ShieldCheck className="w-4 h-4 text-blue-700" />
           </div>
-          <div className="mt-2 text-2xl font-bold font-mono text-blue-700">
-            {stats.confirmed}
-          </div>
+          {isLoading ? (
+            <ShimmerBox className="h-8 w-16 rounded-md mt-2" />
+          ) : (
+            <div className="mt-2 text-2xl font-bold font-mono text-blue-700">
+              {stats.confirmed}
+            </div>
+          )}
           <p className="text-[11px] text-[var(--text-muted)] mt-1">Confirmed & in fulfillment</p>
         </div>
       </div>
@@ -324,10 +347,10 @@ export default function CustomerQuotationsHub({
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
           {(
             [
-              { key: "ALL", label: `All (${stats.total})` },
-              { key: "IN_REVIEW", label: `In Review (${stats.inReview})` },
-              { key: "APPROVED", label: `Approved (${stats.approved})` },
-              { key: "CONFIRMED", label: `Confirmed (${stats.confirmed})` },
+              { key: "ALL", label: "All", count: stats.total },
+              { key: "IN_REVIEW", label: "In Review", count: stats.inReview },
+              { key: "APPROVED", label: "Approved", count: stats.approved },
+              { key: "CONFIRMED", label: "Confirmed", count: stats.confirmed },
             ] as const
           ).map((filter) => (
             <button
@@ -339,14 +362,52 @@ export default function CustomerQuotationsHub({
                   : "bg-[var(--card)] text-[var(--text-muted)] border border-[var(--border)] hover:text-[var(--text-main)]"
               }`}
             >
-              {filter.label}
+              <span>{filter.label}</span>{" "}
+              {isLoading ? <ShimmerPill className="w-3.5 h-3 ml-1" /> : `(${filter.count})`}
             </button>
           ))}
         </div>
       </div>
 
       {/* 5. Quotations Grid */}
-      {filteredQuotes.length === 0 ? (
+      {isLoading ? (
+        <div className="grid grid-cols-1 gap-4">
+          {[1, 2].map((n) => (
+            <div
+              key={n}
+              className="bg-[var(--card)] rounded-2xl border border-[var(--border)] p-6 shadow-xs space-y-4"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <ShimmerBox className="w-10 h-10 rounded-xl" />
+                  <div className="space-y-1.5">
+                    <ShimmerBox className="h-5 w-36 rounded" />
+                    <ShimmerBox className="h-3 w-48 rounded" />
+                  </div>
+                </div>
+                <ShimmerBox className="h-7 w-24 rounded-md" />
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-3 border-t border-[var(--border-subtle)]">
+                <div>
+                  <ShimmerBox className="h-3 w-16 rounded mb-1" />
+                  <ShimmerBox className="h-5 w-24 rounded" />
+                </div>
+                <div>
+                  <ShimmerBox className="h-3 w-16 rounded mb-1" />
+                  <ShimmerBox className="h-5 w-20 rounded" />
+                </div>
+                <div>
+                  <ShimmerBox className="h-3 w-16 rounded mb-1" />
+                  <ShimmerBox className="h-5 w-20 rounded" />
+                </div>
+                <div className="flex items-center justify-end">
+                  <ShimmerBox className="h-9 w-28 rounded-xl" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : filteredQuotes.length === 0 ? (
         <div className="bg-[var(--card)] rounded-2xl border border-[var(--border)] p-12 text-center space-y-3">
           <AlertCircle className="w-10 h-10 text-[var(--text-muted)] mx-auto" />
           <h3 className="text-base font-bold text-[var(--text-main)]">No matching quotations found</h3>

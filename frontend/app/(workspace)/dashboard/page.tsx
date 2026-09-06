@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
 import { useRole } from "@/context/RoleContext";
+import { useQuotations } from "@/context/QuotationsContext";
 import {
   FileText,
   Kanban,
@@ -19,14 +20,34 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import FulfillmentSplitScreen from "@/components/fulfillment/FulfillmentSplitScreen";
+import { ShimmerBox } from "@/components/ui/Shimmer";
 
 export default function SalesWorkspaceDashboard() {
   const { activeUser, currentRole, reloadData, isReloading } = useRole();
+  const { quotations, isLoading: quotesLoading, refetchQuotations } = useQuotations();
+  const isLoading = isReloading || quotesLoading;
+
+  useEffect(() => {
+    refetchQuotations();
+  }, [refetchQuotations]);
 
   // If user is Finance / Operations persona, show their dedicated Fulfillment and Warehouse Split overview
   if (currentRole === "FINANCE_OPS") {
     return <FulfillmentSplitScreen />;
   }
+
+  const draftCount = quotations.filter((q) => q.status === "DRAFT").length;
+  const inReviewCount = quotations.filter((q) => q.status === "IN_REVIEW").length;
+  const totalPipelineValue = quotations.reduce((sum, q) => sum + (q.totalAmount || 0), 0);
+  const avgMargin =
+    quotations.length > 0
+      ? (quotations.reduce((sum, q) => sum + (q.blendedMargin || 0), 0) / quotations.length).toFixed(1)
+      : "21.5";
+
+  const handleRefreshAll = () => {
+    reloadData();
+    refetchQuotations();
+  };
 
   return (
     <div className="space-y-6">
@@ -66,13 +87,13 @@ export default function SalesWorkspaceDashboard() {
 
             <button
               type="button"
-              onClick={() => reloadData()}
-              disabled={isReloading}
+              onClick={handleRefreshAll}
+              disabled={isLoading}
               className="btn-ghost text-xs py-2 px-3 border border-[var(--border)] flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               title="Refresh pricing, stock & approvals"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isReloading ? "animate-spin text-[var(--primary)]" : ""}`} />
-              <span className="hidden sm:inline">Refresh Data</span>
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-[var(--primary)]" : ""}`} />
+              <span className="hidden sm:inline">{isLoading ? "Syncing..." : "Refresh Data"}</span>
             </button>
           </div>
         </div>
@@ -87,12 +108,22 @@ export default function SalesWorkspaceDashboard() {
         <div className="card-glass p-4 rounded-xl border border-[var(--border)]/70 flex items-center justify-between">
           <div className="space-y-1">
             <div className="text-xs text-[var(--text-muted)] font-medium">Active Quotations</div>
-            <div className="text-2xl font-bold text-[var(--text-main)] font-heading">3 Deals</div>
-            <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-              2 Drafts, 1 Under Review
-            </div>
+            {isLoading ? (
+              <ShimmerBox className="h-7 w-24 my-1 rounded-md" />
+            ) : (
+              <div className="text-2xl font-bold text-[var(--text-main)] font-heading">
+                {quotations.length} Deals
+              </div>
+            )}
+            {isLoading ? (
+              <ShimmerBox className="h-3 w-32 mt-1 rounded" />
+            ) : (
+              <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                {draftCount} Drafts, {inReviewCount} In Review
+              </div>
+            )}
           </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
             <FileText className="w-5 h-5" />
           </div>
         </div>
@@ -101,12 +132,22 @@ export default function SalesWorkspaceDashboard() {
         <div className="card-glass p-4 rounded-xl border border-[var(--border)]/70 flex items-center justify-between">
           <div className="space-y-1">
             <div className="text-xs text-[var(--text-muted)] font-medium">Weighted Pipeline Value</div>
-            <div className="text-2xl font-bold text-[var(--text-main)] font-heading">₹32,80,000</div>
-            <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-              +14% vs. target quota
-            </div>
+            {isLoading ? (
+              <ShimmerBox className="h-7 w-28 my-1 rounded-md" />
+            ) : (
+              <div className="text-2xl font-bold text-[var(--text-main)] font-heading">
+                ₹{totalPipelineValue.toLocaleString("en-IN")}
+              </div>
+            )}
+            {isLoading ? (
+              <ShimmerBox className="h-3 w-28 mt-1 rounded" />
+            ) : (
+              <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                {quotations.length} Active Deals Tracked
+              </div>
+            )}
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
             <TrendingUp className="w-5 h-5" />
           </div>
         </div>
@@ -115,12 +156,22 @@ export default function SalesWorkspaceDashboard() {
         <div className="card-glass p-4 rounded-xl border border-[var(--border)]/70 flex items-center justify-between">
           <div className="space-y-1">
             <div className="text-xs text-[var(--text-muted)] font-medium">Blended Margin Floor</div>
-            <div className="text-2xl font-bold text-[var(--text-main)] font-heading">21.5%</div>
-            <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-              Protected across tiers
-            </div>
+            {isLoading ? (
+              <ShimmerBox className="h-7 w-20 my-1 rounded-md" />
+            ) : (
+              <div className="text-2xl font-bold text-[var(--text-main)] font-heading">
+                {avgMargin}%
+              </div>
+            )}
+            {isLoading ? (
+              <ShimmerBox className="h-3 w-28 mt-1 rounded" />
+            ) : (
+              <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                Protected across tiers
+              </div>
+            )}
           </div>
-          <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
             <ShieldCheck className="w-5 h-5" />
           </div>
         </div>
@@ -129,12 +180,20 @@ export default function SalesWorkspaceDashboard() {
         <div className="card-glass p-4 rounded-xl border border-[var(--border)]/70 flex items-center justify-between">
           <div className="space-y-1">
             <div className="text-xs text-[var(--text-muted)] font-medium">Inventory Feasibility</div>
-            <div className="text-2xl font-bold text-[var(--text-main)] font-heading">100% Ready</div>
-            <div className="text-[11px] text-[var(--text-muted)]">
-              Main Central & East Hub
-            </div>
+            {isLoading ? (
+              <ShimmerBox className="h-7 w-28 my-1 rounded-md" />
+            ) : (
+              <div className="text-2xl font-bold text-[var(--text-main)] font-heading">100% Ready</div>
+            )}
+            {isLoading ? (
+              <ShimmerBox className="h-3 w-32 mt-1 rounded" />
+            ) : (
+              <div className="text-[11px] text-[var(--text-muted)]">
+                Main Central & East Hub
+              </div>
+            )}
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
             <Layers className="w-5 h-5" />
           </div>
         </div>
@@ -234,98 +293,72 @@ export default function SalesWorkspaceDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border-subtle)]/70 text-[var(--text-body)]">
-              <tr className="hover:bg-[var(--card-hover)]/60 transition-colors">
-                <td className="px-4 py-3.5 font-mono font-medium text-[var(--text-main)]">
-                  QT-2026-0043
-                </td>
-                <td className="px-4 py-3.5">
-                  <div className="font-semibold text-[var(--text-main)]">Acme Corp</div>
-                  <div className="text-[11px] text-[var(--text-muted)]">Gold Tier (15% Max)</div>
-                </td>
-                <td className="px-4 py-3.5 font-semibold text-[var(--text-main)]">
-                  ₹18,81,392
-                </td>
-                <td className="px-4 py-3.5">
-                  <span className="badge badge-warning text-[10px]">
-                    18.4% (Req Mgr)
-                  </span>
-                </td>
-                <td className="px-4 py-3.5">
-                  <span className="badge badge-accent text-[10px]">
-                    IN_REVIEW
-                  </span>
-                </td>
-                <td className="px-4 py-3.5 text-right">
-                  <Link
-                    href="/quotations"
-                    className="btn-ghost text-[11px] py-1 px-2.5 border border-[var(--border)] rounded-md font-medium"
-                  >
-                    Inspect Deal
-                  </Link>
-                </td>
-              </tr>
-
-              <tr className="hover:bg-[var(--card-hover)]/60 transition-colors">
-                <td className="px-4 py-3.5 font-mono font-medium text-[var(--text-main)]">
-                  QT-2026-0044
-                </td>
-                <td className="px-4 py-3.5">
-                  <div className="font-semibold text-[var(--text-main)]">Stark Enterprises</div>
-                  <div className="text-[11px] text-[var(--text-muted)]">Enterprise Tier (20% Max)</div>
-                </td>
-                <td className="px-4 py-3.5 font-semibold text-[var(--text-main)]">
-                  ₹9,50,000
-                </td>
-                <td className="px-4 py-3.5">
-                  <span className="badge badge-success text-[10px]">
-                    24.8% High
-                  </span>
-                </td>
-                <td className="px-4 py-3.5">
-                  <span className="badge badge-role-rep text-[10px]">
-                    DRAFT
-                  </span>
-                </td>
-                <td className="px-4 py-3.5 text-right">
-                  <Link
-                    href="/quotations"
-                    className="btn-ghost text-[11px] py-1 px-2.5 border border-[var(--border)] rounded-md font-medium"
-                  >
-                    Edit Draft
-                  </Link>
-                </td>
-              </tr>
-
-              <tr className="hover:bg-[var(--card-hover)]/60 transition-colors">
-                <td className="px-4 py-3.5 font-mono font-medium text-[var(--text-main)]">
-                  QT-2026-0045
-                </td>
-                <td className="px-4 py-3.5">
-                  <div className="font-semibold text-[var(--text-main)]">Wayne Logistics</div>
-                  <div className="text-[11px] text-[var(--text-muted)]">Silver Tier (10% Max)</div>
-                </td>
-                <td className="px-4 py-3.5 font-semibold text-[var(--text-main)]">
-                  ₹4,48,600
-                </td>
-                <td className="px-4 py-3.5">
-                  <span className="badge badge-success text-[10px]">
-                    22.1% High
-                  </span>
-                </td>
-                <td className="px-4 py-3.5">
-                  <span className="badge badge-role-rep text-[10px]">
-                    DRAFT
-                  </span>
-                </td>
-                <td className="px-4 py-3.5 text-right">
-                  <Link
-                    href="/quotations"
-                    className="btn-ghost text-[11px] py-1 px-2.5 border border-[var(--border)] rounded-md font-medium"
-                  >
-                    Edit Draft
-                  </Link>
-                </td>
-              </tr>
+              {isLoading ? (
+                Array.from({ length: 3 }).map((_, idx) => (
+                  <tr key={idx} className="border-b border-[var(--border-subtle)]/70">
+                    <td className="px-4 py-3.5">
+                      <ShimmerBox className="h-4 w-24 rounded" />
+                    </td>
+                    <td className="px-4 py-3.5 space-y-1.5">
+                      <ShimmerBox className="h-4 w-32 rounded" />
+                      <ShimmerBox className="h-3 w-20 rounded" />
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <ShimmerBox className="h-4 w-20 rounded" />
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <ShimmerBox className="h-5 w-16 rounded-full" />
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <ShimmerBox className="h-5 w-20 rounded-md" />
+                    </td>
+                    <td className="px-4 py-3.5 text-right">
+                      <ShimmerBox className="h-7 w-20 rounded-md ml-auto" />
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                quotations.slice(0, 3).map((q) => (
+                  <tr key={q.id} className="hover:bg-[var(--card-hover)]/60 transition-colors">
+                    <td className="px-4 py-3.5 font-mono font-medium text-[var(--text-main)]">
+                      {q.id}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <div className="font-semibold text-[var(--text-main)]">{q.customerName}</div>
+                      <div className="text-[11px] text-[var(--text-muted)]">{q.tier} Tier ({q.tierCeiling}% Max)</div>
+                    </td>
+                    <td className="px-4 py-3.5 font-semibold text-[var(--text-main)]">
+                      {q.total}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <span
+                        className={`badge text-[10px] ${
+                          q.marginStatus === "HIGH"
+                            ? "badge-success"
+                            : q.marginStatus === "MEDIUM"
+                            ? "badge-warning"
+                            : "badge-destructive"
+                        }`}
+                      >
+                        {q.blendedMargin}%
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <span className="badge badge-accent text-[10px]">
+                        {q.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5 text-right">
+                      <Link
+                        href={`/quotations/${q.id}`}
+                        className="btn-ghost text-[11px] py-1 px-2.5 border border-[var(--border)] rounded-md font-medium hover:bg-[var(--primary)] hover:text-white transition-colors"
+                      >
+                        Inspect Deal
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

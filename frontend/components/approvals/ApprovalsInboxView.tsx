@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   ShieldAlert,
   ShieldCheck,
@@ -16,11 +16,13 @@ import {
   XCircle,
   RotateCcw,
   Sparkles,
+  RefreshCw,
 } from "lucide-react";
 import { useQuotations, type QuotationRecord } from "@/context/QuotationsContext";
 import { useRole } from "@/context/RoleContext";
 import type { Role } from "@/types";
 import DiscountApprovalScreen from "./DiscountApprovalScreen";
+import { ShimmerBox, ShimmerPill } from "@/components/ui/Shimmer";
 
 interface ApprovalsInboxViewProps {
   initialQuoteId?: string;
@@ -103,8 +105,12 @@ function checkQuoteTabEligibility(
 }
 
 export default function ApprovalsInboxView({ initialQuoteId }: ApprovalsInboxViewProps) {
-  const { quotations } = useQuotations();
+  const { quotations, isLoading, refetchQuotations } = useQuotations();
   const { activeUser, currentRole } = useRole();
+
+  useEffect(() => {
+    refetchQuotations();
+  }, [refetchQuotations]);
 
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(initialQuoteId || null);
   const [activeTab, setActiveTab] = useState<TabType>("PENDING");
@@ -188,12 +194,25 @@ export default function ApprovalsInboxView({ initialQuoteId }: ApprovalsInboxVie
           </div>
         </div>
 
-        <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-[var(--border)] shadow-xs text-xs">
-          <span className="text-[var(--text-muted)]">Active Role:</span>
-          <span className="font-bold text-[var(--text-main)]">{activeUser.name}</span>
-          <span className="text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200">
-            {activeUser.roleLabel}
-          </span>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => refetchQuotations()}
+            disabled={isLoading}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white hover:bg-slate-50 border border-[var(--border)] text-xs font-semibold text-[var(--text-main)] shadow-xs transition-all cursor-pointer disabled:opacity-50"
+            title="Refresh approvals inbox"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-indigo-600 ${isLoading ? "animate-spin" : ""}`} />
+            <span>{isLoading ? "Syncing..." : "Sync Inbox"}</span>
+          </button>
+
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-[var(--border)] shadow-xs text-xs">
+            <span className="text-[var(--text-muted)]">Active Role:</span>
+            <span className="font-bold text-[var(--text-main)]">{activeUser.name}</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200">
+              {activeUser.roleLabel}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -205,9 +224,13 @@ export default function ApprovalsInboxView({ initialQuoteId }: ApprovalsInboxVie
             <span>Pending Governance Review</span>
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold font-mono text-[var(--text-main)]">
-              {metrics.pendingCount}
-            </span>
+            {isLoading ? (
+              <ShimmerBox className="h-8 w-14 rounded-md my-0.5" />
+            ) : (
+              <span className="text-2xl font-extrabold font-mono text-[var(--text-main)]">
+                {metrics.pendingCount}
+              </span>
+            )}
             <span className="text-xs text-[var(--text-muted)] font-medium">quotations</span>
           </div>
         </div>
@@ -218,9 +241,13 @@ export default function ApprovalsInboxView({ initialQuoteId }: ApprovalsInboxVie
             <span>Tier-1 (Sales Manager) Queue</span>
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold font-mono text-indigo-600">
-              {metrics.managerPendingCount}
-            </span>
+            {isLoading ? (
+              <ShimmerBox className="h-8 w-14 rounded-md my-0.5" />
+            ) : (
+              <span className="text-2xl font-extrabold font-mono text-indigo-600">
+                {metrics.managerPendingCount}
+              </span>
+            )}
             <span className="text-xs text-[var(--text-muted)] font-medium">awaiting Morgan</span>
           </div>
         </div>
@@ -231,9 +258,13 @@ export default function ApprovalsInboxView({ initialQuoteId }: ApprovalsInboxVie
             <span>Tier-2 (Finance Director) Queue</span>
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold font-mono text-emerald-600">
-              {metrics.financePendingCount}
-            </span>
+            {isLoading ? (
+              <ShimmerBox className="h-8 w-14 rounded-md my-0.5" />
+            ) : (
+              <span className="text-2xl font-extrabold font-mono text-emerald-600">
+                {metrics.financePendingCount}
+              </span>
+            )}
             <span className="text-xs text-[var(--text-muted)] font-medium">awaiting Elena</span>
           </div>
         </div>
@@ -244,9 +275,13 @@ export default function ApprovalsInboxView({ initialQuoteId }: ApprovalsInboxVie
             <span>High Risk Deal Exposure</span>
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold font-mono text-rose-600">
-              {metrics.highRiskExposureFormatted}
-            </span>
+            {isLoading ? (
+              <ShimmerBox className="h-8 w-20 rounded-md my-0.5" />
+            ) : (
+              <span className="text-2xl font-extrabold font-mono text-rose-600">
+                {metrics.highRiskExposureFormatted}
+              </span>
+            )}
             <span className="text-xs text-[var(--text-muted)] font-medium">aggregate total</span>
           </div>
         </div>
@@ -264,7 +299,7 @@ export default function ApprovalsInboxView({ initialQuoteId }: ApprovalsInboxVie
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            Pending Review ({tabCounts.pending})
+            Pending Review {isLoading ? <ShimmerPill className="w-3.5 h-3 ml-1" /> : `(${tabCounts.pending})`}
           </button>
           <button
             type="button"
@@ -275,7 +310,7 @@ export default function ApprovalsInboxView({ initialQuoteId }: ApprovalsInboxVie
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            High Risk &gt;50 ({tabCounts.highRisk})
+            High Risk &gt;50 {isLoading ? <ShimmerPill className="w-3.5 h-3 ml-1" /> : `(${tabCounts.highRisk})`}
           </button>
           <button
             type="button"
@@ -286,7 +321,7 @@ export default function ApprovalsInboxView({ initialQuoteId }: ApprovalsInboxVie
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            Approved Ledger ({tabCounts.approved})
+            Approved Ledger {isLoading ? <ShimmerPill className="w-3.5 h-3 ml-1" /> : `(${tabCounts.approved})`}
           </button>
           <button
             type="button"
@@ -297,7 +332,7 @@ export default function ApprovalsInboxView({ initialQuoteId }: ApprovalsInboxVie
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            Revisions / Rejected ({tabCounts.revisions})
+            Revisions / Rejected {isLoading ? <ShimmerPill className="w-3.5 h-3 ml-1" /> : `(${tabCounts.revisions})`}
           </button>
         </div>
 
@@ -316,7 +351,40 @@ export default function ApprovalsInboxView({ initialQuoteId }: ApprovalsInboxVie
 
       {/* Quotations List */}
       <div className="space-y-3">
-        {filteredQuotes.length === 0 ? (
+        {isLoading ? (
+          Array.from({ length: 4 }).map((_, idx) => (
+            <div
+              key={idx}
+              className="rounded-2xl border border-[var(--border)] bg-white p-5 shadow-xs space-y-3"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <ShimmerBox className="h-4 w-24 rounded" />
+                  <ShimmerBox className="h-5 w-20 rounded-md" />
+                  <ShimmerBox className="h-5 w-16 rounded-full" />
+                </div>
+                <ShimmerBox className="h-4 w-28 rounded" />
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                <div>
+                  <ShimmerBox className="h-3 w-16 rounded mb-1.5" />
+                  <ShimmerBox className="h-4 w-24 rounded" />
+                </div>
+                <div>
+                  <ShimmerBox className="h-3 w-16 rounded mb-1.5" />
+                  <ShimmerBox className="h-4 w-20 rounded" />
+                </div>
+                <div>
+                  <ShimmerBox className="h-3 w-16 rounded mb-1.5" />
+                  <ShimmerBox className="h-4 w-20 rounded" />
+                </div>
+                <div className="text-right flex items-center justify-end">
+                  <ShimmerBox className="h-8 w-24 rounded-xl" />
+                </div>
+              </div>
+            </div>
+          ))
+        ) : filteredQuotes.length === 0 ? (
           <div className="rounded-2xl border border-[var(--border)] bg-white p-12 text-center space-y-2 shadow-xs">
             <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
             <h3 className="text-sm font-bold text-[var(--text-main)]">

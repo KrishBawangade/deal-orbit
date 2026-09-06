@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRole } from "@/context/RoleContext";
@@ -13,7 +13,9 @@ import {
   ShieldCheck,
   ShieldAlert,
   Clock,
+  RefreshCw,
 } from "lucide-react";
+import { ShimmerBox, ShimmerPill } from "@/components/ui/Shimmer";
 
 export type PipelineStage = "DRAFT" | "UNDER_REVIEW" | "NEGOTIATING" | "CONFIRMED" | "FULFILLMENT";
 
@@ -30,63 +32,52 @@ export interface PipelineDeal {
   daysActive: number;
 }
 
-const COLUMNS: { id: PipelineStage; title: string; color: string }[] = [
-  { id: "DRAFT", title: "Draft Proposals", color: "border-slate-500/40 text-slate-700 dark:text-slate-300" },
-  { id: "UNDER_REVIEW", title: "Under Manager Review", color: "border-amber-500/40 text-amber-600 dark:text-amber-400" },
-  { id: "NEGOTIATING", title: "Customer Negotiating", color: "border-blue-500/40 text-blue-600 dark:text-blue-400" },
-  { id: "CONFIRMED", title: "Digitally Confirmed", color: "border-emerald-500/40 text-emerald-600 dark:text-emerald-400" },
-  { id: "FULFILLMENT", title: "Warehouse Fulfillment", color: "border-purple-500/40 text-purple-600 dark:text-purple-400" },
-];
-
-function mapQuoteToStage(quote: QuotationRecord): PipelineStage {
-  const status = (quote.status || "").toUpperCase();
-  if (status === "DRAFT") return "DRAFT";
-  if (
-    status === "IN_REVIEW" ||
-    quote.approvalStage === "SALES_MANAGER" ||
-    quote.approvalStage === "FINANCE"
-  ) {
-    return "UNDER_REVIEW";
-  }
-  if (
-    status === "CONFIRMED" ||
-    status === "ACCEPTED" ||
-    status === "CUSTOMER_ACCEPTED"
-  ) {
-    return "CONFIRMED";
-  }
-  if (
-    status === "FULFILLED" ||
-    status === "CLOSED_WON" ||
-    Boolean(quote.salesOrderNumber)
-  ) {
-    return "FULFILLMENT";
-  }
-  // APPROVED, CUSTOMER_REVIEW, NEGOTIATING, or default
-  return "NEGOTIATING";
+interface ColumnConfig {
+  id: PipelineStage;
+  title: string;
+  color: string;
 }
 
-function mapQuoteToDeal(quote: QuotationRecord, fallbackRepName: string): PipelineDeal {
-  const stage = mapQuoteToStage(quote);
+const COLUMNS: ColumnConfig[] = [
+  { id: "DRAFT", title: "Drafting & Scoping", color: "border-slate-500/30" },
+  { id: "UNDER_REVIEW", title: "Governance Review", color: "border-amber-500/30" },
+  { id: "NEGOTIATING", title: "Customer Review", color: "border-blue-500/30" },
+  { id: "CONFIRMED", title: "Approved & Sign-off", color: "border-indigo-500/30" },
+  { id: "FULFILLMENT", title: "Accepted / Order", color: "border-emerald-500/30" },
+];
 
-  let daysActive = 1;
-  if (quote.updatedAt) {
-    const updatedTime = new Date(quote.updatedAt).getTime();
-    if (!isNaN(updatedTime)) {
-      daysActive = Math.max(1, Math.floor((Date.now() - updatedTime) / (1000 * 60 * 60 * 24)));
-    }
-  }
+function mapQuoteToDeal(quote: QuotationRecord, fallbackRepName?: string): PipelineDeal {
+  let stage: PipelineStage = "DRAFT";
+  if (quote.status === "DRAFT") stage = "DRAFT";
+  else if (quote.status === "IN_REVIEW") stage = "UNDER_REVIEW";
+  else if (quote.status === "CUSTOMER_REVIEW" || quote.status === "NEGOTIATING") stage = "NEGOTIATING";
+  else if (quote.status === "APPROVED") stage = "CONFIRMED";
+  else if (quote.status === "ACCEPTED" || quote.status === "CONVERTED_TO_ORDER") stage = "FULFILLMENT";
 
-  const tierFormatted = quote.tier
-    ? `${quote.tier.charAt(0).toUpperCase() + quote.tier.slice(1).toLowerCase()} Tier`
-    : "Enterprise Tier";
+  const tierFormatted =
+    quote.tier === "GOLD"
+      ? "Tier 1 (Gold)"
+      : quote.tier === "SILVER"
+      ? "Tier 2 (Silver)"
+      : quote.tier === "ENTERPRISE"
+      ? "Enterprise"
+      : "Standard";
 
-  const totalAmount = quote.totalAmount || 0;
+  const totalAmount = typeof quote.totalAmount === "number" ? quote.totalAmount : 0;
   const formattedValue =
-    quote.total ||
-    (totalAmount > 0
-      ? `₹${totalAmount.toLocaleString("en-IN")}`
-      : "₹0");
+    totalAmount >= 10000000
+      ? `₹${(totalAmount / 10000000).toFixed(2)} Cr`
+      : totalAmount >= 100000
+      ? `₹${(totalAmount / 100000).toFixed(2)} Lakh`
+      : `₹${totalAmount.toLocaleString("en-IN")}`;
+
+  let daysActive = 3;
+  if (quote.updatedAt && (quote.updatedAt.includes("hour") || quote.updatedAt.includes("min"))) daysActive = 1;
+  else if (quote.updatedAt && quote.updatedAt.includes("Yesterday")) daysActive = 2;
+  else if (quote.updatedAt && quote.updatedAt.includes("day")) {
+    const match = quote.updatedAt.match(/\d+/);
+    if (match) daysActive = parseInt(match[0], 10);
+  }
 
   return {
     id: quote.id,
@@ -105,8 +96,12 @@ function mapQuoteToDeal(quote: QuotationRecord, fallbackRepName: string): Pipeli
 export default function PipelinePage() {
   const router = useRouter();
   const { activeUser } = useRole();
-  const { quotations } = useQuotations();
+  const { quotations, isLoading, refetchQuotations } = useQuotations();
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    refetchQuotations();
+  }, [refetchQuotations]);
 
   const deals: PipelineDeal[] = quotations.map((q) => mapQuoteToDeal(q, activeUser.name));
 
@@ -138,6 +133,17 @@ export default function PipelinePage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => refetchQuotations()}
+            disabled={isLoading}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--card)] hover:bg-[var(--card-hover)] border border-[var(--border)] text-xs font-semibold text-[var(--text-main)] shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+            title="Refresh pipeline live from backend"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-[var(--primary)] ${isLoading ? "animate-spin" : ""}`} />
+            <span>{isLoading ? "Syncing..." : "Sync Pipeline"}</span>
+          </button>
+
           {activeUser.role !== "FINANCE_OPS" && (
             <Link
               href="/quotations/new"
@@ -153,18 +159,26 @@ export default function PipelinePage() {
       {/* 2. Pipeline Summary Strip */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[var(--card)]/60 p-3 rounded-xl border border-[var(--border)] text-xs">
         <div className="flex items-center gap-4 text-[var(--text-muted)]">
-          <div>
-            Total Active Pipeline:{" "}
-            <strong className="text-[var(--text-main)] font-heading">
-              {formattedPipelineValue}
-            </strong>
+          <div className="flex items-center gap-1.5">
+            <span>Total Active Pipeline:</span>
+            {isLoading ? (
+              <ShimmerBox className="h-4 w-24 rounded" />
+            ) : (
+              <strong className="text-[var(--text-main)] font-heading">
+                {formattedPipelineValue}
+              </strong>
+            )}
           </div>
           <span>•</span>
-          <div>
-            Total Deals:{" "}
-            <strong className="text-[var(--text-main)]">
-              {filteredDeals.length} {filteredDeals.length === 1 ? "Deal" : "Deals"}
-            </strong>
+          <div className="flex items-center gap-1.5">
+            <span>Total Deals:</span>
+            {isLoading ? (
+              <ShimmerBox className="h-4 w-16 rounded" />
+            ) : (
+              <strong className="text-[var(--text-main)]">
+                {filteredDeals.length} {filteredDeals.length === 1 ? "Deal" : "Deals"}
+              </strong>
+            )}
           </div>
         </div>
 
@@ -198,19 +212,45 @@ export default function PipelinePage() {
                     {col.title}
                   </h3>
                   <div className="text-[10px] text-[var(--text-muted)]">
-                    {colTotalValue >= 100000
-                      ? `₹${(colTotalValue / 100000).toFixed(1)}L Total`
-                      : `₹${colTotalValue.toLocaleString("en-IN")} Total`}
+                    {isLoading ? (
+                      <ShimmerBox className="h-3 w-16 rounded mt-0.5" />
+                    ) : colTotalValue >= 100000 ? (
+                      `₹${(colTotalValue / 100000).toFixed(1)}L Total`
+                    ) : (
+                      `₹${colTotalValue.toLocaleString("en-IN")} Total`
+                    )}
                   </div>
                 </div>
                 <span className="w-5 h-5 rounded-full bg-[var(--card)] border border-[var(--border)] text-[10px] font-bold flex items-center justify-center text-[var(--text-main)]">
-                  {colDeals.length}
+                  {isLoading ? <ShimmerPill className="w-2.5 h-2.5 rounded-full" /> : colDeals.length}
                 </span>
               </div>
 
               {/* Deal Cards */}
               <div className="space-y-2.5 flex-1">
-                {colDeals.length === 0 ? (
+                {isLoading ? (
+                  Array.from({ length: 2 }).map((_, n) => (
+                    <div
+                      key={n}
+                      className="card-glass p-3.5 rounded-lg border border-[var(--border)] space-y-2.5 shadow-2xs"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <ShimmerBox className="h-4 w-24 rounded" />
+                        <ShimmerBox className="h-4 w-12 rounded-full" />
+                      </div>
+                      <ShimmerBox className="h-5 w-20 rounded" />
+                      <div className="flex items-center gap-2 pt-1">
+                        <ShimmerBox className="h-3 w-14 rounded" />
+                        <span className="text-[var(--text-muted)]/20 text-[10px]">•</span>
+                        <ShimmerBox className="h-3 w-16 rounded" />
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-[var(--border-subtle)]">
+                        <ShimmerBox className="h-3 w-16 rounded" />
+                        <ShimmerBox className="h-4 w-14 rounded-full" />
+                      </div>
+                    </div>
+                  ))
+                ) : colDeals.length === 0 ? (
                   <div className="h-32 border border-dashed border-[var(--border-subtle)] rounded-lg flex items-center justify-center text-[11px] text-[var(--text-muted)]">
                     No deals in stage
                   </div>

@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { siteConfig } from "@/config/site";
 import { IHybridOrder } from "./SubscriptionBillingScreen";
 import { ICreditNoteItem } from "./CreditNotesLedgerModal";
+import { ShimmerBox } from "@/components/ui/Shimmer";
 
 // Auth helper
 const getAuthHeaders = (): Record<string, string> => {
@@ -289,12 +290,20 @@ export default function SubscriptionContractsList() {
             <span>Portfolio MRR</span>
             <CreditCard className="w-4 h-4 text-indigo-500" />
           </div>
-          <div className="text-xl sm:text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 font-mono">
-            ₹{portfolioMetrics.totalMRR.toLocaleString("en-IN")}
-          </div>
-          <div className="text-[10px] text-[var(--text-muted)] font-medium">
-            ARR: ₹{portfolioMetrics.totalARR.toLocaleString("en-IN")} / yr
-          </div>
+          {isLoading ? (
+            <ShimmerBox className="h-8 w-28 my-1 rounded-md" />
+          ) : (
+            <div className="text-xl sm:text-2xl font-extrabold text-indigo-600 dark:text-indigo-400 font-mono">
+              ₹{portfolioMetrics.totalMRR.toLocaleString("en-IN")}
+            </div>
+          )}
+          {isLoading ? (
+            <ShimmerBox className="h-3 w-32 rounded" />
+          ) : (
+            <div className="text-[10px] text-[var(--text-muted)] font-medium">
+              ARR: ₹{portfolioMetrics.totalARR.toLocaleString("en-IN")} / yr
+            </div>
+          )}
         </div>
 
         {/* Total One-Time Hardware Bookings */}
@@ -303,13 +312,21 @@ export default function SubscriptionContractsList() {
             <span>Capital Hardware Bookings</span>
             <Layers className="w-4 h-4 text-blue-500" />
           </div>
-          <div className="text-xl sm:text-2xl font-extrabold text-[var(--text-main)] font-mono">
-            ₹{portfolioMetrics.totalOneTime.toLocaleString("en-IN")}
-          </div>
-          <div className="text-[10px] text-emerald-600 font-medium flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" />
-            <span>Hardware &amp; Setup Invoiced</span>
-          </div>
+          {isLoading ? (
+            <ShimmerBox className="h-8 w-28 my-1 rounded-md" />
+          ) : (
+            <div className="text-xl sm:text-2xl font-extrabold text-[var(--text-main)] font-mono">
+              ₹{portfolioMetrics.totalOneTime.toLocaleString("en-IN")}
+            </div>
+          )}
+          {isLoading ? (
+            <ShimmerBox className="h-3 w-36 rounded" />
+          ) : (
+            <div className="text-[10px] text-emerald-600 font-medium flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" />
+              <span>Hardware &amp; Setup Invoiced</span>
+            </div>
+          )}
         </div>
 
         {/* Total Active Recurring Subscriptions */}
@@ -318,15 +335,23 @@ export default function SubscriptionContractsList() {
             <span>Active Subscriptions</span>
             <ShieldCheck className="w-4 h-4 text-emerald-500" />
           </div>
-          <div className="text-xl sm:text-2xl font-extrabold text-[var(--text-main)] font-mono">
-            {portfolioMetrics.totalActiveSubscriptions}
-            <span className="text-xs text-[var(--text-muted)] font-normal ml-1">
-              across {portfolioMetrics.totalContracts} Contracts
-            </span>
-          </div>
-          <div className="text-[10px] text-[var(--text-muted)]">
-            Multi-Tenant Cloud &amp; SLA Tiers
-          </div>
+          {isLoading ? (
+            <ShimmerBox className="h-8 w-20 my-1 rounded-md" />
+          ) : (
+            <div className="text-xl sm:text-2xl font-extrabold text-[var(--text-main)] font-mono">
+              {portfolioMetrics.totalActiveSubscriptions}
+              <span className="text-xs text-[var(--text-muted)] font-normal ml-1">
+                across {portfolioMetrics.totalContracts} Contracts
+              </span>
+            </div>
+          )}
+          {isLoading ? (
+            <ShimmerBox className="h-3 w-32 rounded" />
+          ) : (
+            <div className="text-[10px] text-[var(--text-muted)]">
+              Multi-Tenant Cloud &amp; SLA Tiers
+            </div>
+          )}
         </div>
 
         {/* Issued Credit Notes Ledger */}
@@ -335,12 +360,20 @@ export default function SubscriptionContractsList() {
             <span>Credit Notes Balance</span>
             <RotateCcw className="w-4 h-4 text-emerald-600" />
           </div>
-          <div className="text-xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-            ₹{portfolioMetrics.totalCreditNotesAmount.toLocaleString("en-IN")}
-          </div>
-          <div className="text-[10px] text-emerald-600 font-medium">
-            {portfolioMetrics.totalCreditNotesCount} audit-verified adjustments
-          </div>
+          {isLoading ? (
+            <ShimmerBox className="h-8 w-24 my-1 rounded-md" />
+          ) : (
+            <div className="text-xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
+              ₹{portfolioMetrics.totalCreditNotesAmount.toLocaleString("en-IN")}
+            </div>
+          )}
+          {isLoading ? (
+            <ShimmerBox className="h-3 w-32 rounded" />
+          ) : (
+            <div className="text-[10px] text-emerald-600 font-medium">
+              {portfolioMetrics.totalCreditNotesCount} audit-verified adjustments
+            </div>
+          )}
         </div>
       </div>
 
@@ -387,12 +420,18 @@ export default function SubscriptionContractsList() {
           {[1, 2, 3].map((n) => (
             <div
               key={n}
-              className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 space-y-4 animate-pulse"
+              className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 space-y-4 shadow-xs"
             >
-              <div className="h-6 bg-[var(--card-hover)] rounded-lg w-2/3" />
-              <div className="h-16 bg-[var(--card-hover)] rounded-xl" />
-              <div className="h-24 bg-[var(--card-hover)] rounded-xl" />
-              <div className="h-10 bg-[var(--card-hover)] rounded-xl" />
+              <div className="flex items-center justify-between gap-2">
+                <ShimmerBox className="h-6 rounded-lg w-2/3" />
+                <ShimmerBox className="h-5 rounded-full w-16" />
+              </div>
+              <ShimmerBox className="h-16 rounded-xl w-full" />
+              <div className="space-y-2 pt-2">
+                <ShimmerBox className="h-4 rounded w-4/5" />
+                <ShimmerBox className="h-4 rounded w-3/5" />
+              </div>
+              <ShimmerBox className="h-10 rounded-xl w-full mt-4" />
             </div>
           ))}
         </div>
