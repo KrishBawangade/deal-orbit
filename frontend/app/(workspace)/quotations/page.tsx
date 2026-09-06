@@ -301,17 +301,33 @@ export default function QuotationsPage() {
 
                     {/* Status Badge */}
                     <td className="px-4 py-3.5">
-                      <span
-                        className={`badge text-[10px] font-semibold ${
-                          q.status === "DRAFT"
-                            ? "badge-role-rep"
-                            : q.status === "IN_REVIEW"
-                            ? "badge-accent"
-                            : "badge-success"
-                        }`}
-                      >
-                        {q.status}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span
+                          className={`badge text-[10px] font-semibold ${
+                            q.status === "DRAFT"
+                              ? "badge-role-rep"
+                              : q.status === "IN_REVIEW"
+                              ? "badge-accent"
+                              : "badge-success"
+                          }`}
+                        >
+                          {q.status}
+                        </span>
+                        {q.status === "DRAFT" && activeUser.role === "SALES_REP" && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/quotations/${q.id}/simulate`);
+                            }}
+                            className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500/25 transition-colors cursor-pointer"
+                            title="Simulate Deal Strategy for this draft proposal"
+                          >
+                            <Zap className="w-2.5 h-2.5 text-amber-500" />
+                            <span>Simulate ⚡</span>
+                          </button>
+                        )}
+                      </div>
                     </td>
 
                     {/* Updated At */}
@@ -322,6 +338,20 @@ export default function QuotationsPage() {
                     {/* Actions */}
                     <td className="px-4 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {q.status === "DRAFT" && activeUser.role === "SALES_REP" && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/quotations/${q.id}/simulate`);
+                            }}
+                            className="btn-outline text-[11px] py-1 px-2.5 flex items-center gap-1 font-semibold text-amber-700 dark:text-amber-300 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500 hover:text-white transition-all shadow-2xs cursor-pointer"
+                            title="Open Strategy Simulator"
+                          >
+                            <Zap className="w-3 h-3 text-amber-500" />
+                            <span>Simulate</span>
+                          </button>
+                        )}
                         <span
                           className="btn-outline text-[11px] py-1 px-2.5 flex items-center gap-1 font-medium group-hover:bg-[var(--primary)] group-hover:text-white group-hover:border-[var(--primary)] transition-all shadow-2xs"
                         >

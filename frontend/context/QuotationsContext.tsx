@@ -846,8 +846,14 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
   }, [quotations, isLoaded]);
 
   const addQuotation = useCallback(async (quote: QuotationRecord) => {
-    // 1. Optimistic local state update
-    setQuotations((prev) => [quote, ...prev.filter((q) => q.id !== quote.id)]);
+    // 1. Optimistic local state update + immediate persistent cache write
+    setQuotations((prev) => {
+      const updatedList = [quote, ...prev.filter((q) => q.id !== quote.id)];
+      if (typeof window !== "undefined") {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedList));
+      }
+      return updatedList;
+    });
 
     // 2. Persist to PostgreSQL backend API
     try {
@@ -910,10 +916,16 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
             approvalStage: json.data.approvalStage || (json.data.status === "IN_REVIEW" ? "SALES_MANAGER" : undefined),
             auditTrail: json.data.auditTrail || [],
           };
-          setQuotations((prev) => [
-            serverQuote,
-            ...prev.filter((q) => q.id !== quote.id && q.id !== serverQuote.id),
-          ]);
+          setQuotations((prev) => {
+            const updated = [
+              serverQuote,
+              ...prev.filter((q) => q.id !== quote.id && q.id !== serverQuote.id),
+            ];
+            if (typeof window !== "undefined") {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+            }
+            return updated;
+          });
           return serverQuote;
         }
       } else {
@@ -925,10 +937,17 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   const updateQuotation = useCallback(async (quote: QuotationRecord) => {
-    // 1. Optimistic local state update
-    setQuotations((prev) =>
-      prev.map((q) => (q.id === quote.id ? quote : q))
-    );
+    // 1. Optimistic local state update + immediate persistent cache write
+    setQuotations((prev) => {
+      const exists = prev.some((q) => q.id === quote.id);
+      const updatedList = exists
+        ? prev.map((q) => (q.id === quote.id ? quote : q))
+        : [quote, ...prev];
+      if (typeof window !== "undefined") {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedList));
+      }
+      return updatedList;
+    });
 
     // 2. Persist to PostgreSQL backend API
     try {
@@ -991,9 +1010,13 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
             approvalStage: json.data.approvalStage || (json.data.status === "IN_REVIEW" ? "SALES_MANAGER" : undefined),
             auditTrail: json.data.auditTrail || [],
           };
-          setQuotations((prev) =>
-            prev.map((q) => (q.id === quote.id || q.id === serverQuote.id ? serverQuote : q))
-          );
+          setQuotations((prev) => {
+            const updated = prev.map((q) => (q.id === quote.id || q.id === serverQuote.id ? serverQuote : q));
+            if (typeof window !== "undefined") {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+            }
+            return updated;
+          });
           return serverQuote;
         }
       } else {

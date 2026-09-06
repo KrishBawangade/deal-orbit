@@ -28,12 +28,13 @@ import {
   Info,
   RotateCw,
   RefreshCw,
+  Zap,
   Loader2,
   Save,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRole } from "@/context/RoleContext";
-import { useQuotations, QuotationRecord, QuotationLineItem } from "@/context/QuotationsContext";
+import { useQuotations, QuotationRecord, QuotationLineItem, QuotationAuditEntry } from "@/context/QuotationsContext";
 import { CATALOG_PRODUCTS, CUSTOMER_ACCOUNTS, ICatalogProduct, ICustomerAccount } from "@/config/catalogData";
 import { useProductCatalog } from "@/hooks/useProductCatalog";
 import { getRankedRecommendations, IRankedRecommendation } from "@/config/upsellRules";
@@ -55,6 +56,8 @@ export default function QuotationBuilder({ initialQuote }: QuotationBuilderProps
   const isDirtyRef = useRef(false);
   const hasSubmittedRef = useRef(false);
   const isFirstRender = useRef(true);
+  const isNavigatingToSimulate = useRef(false);
+  const prevQuoteUpdatedAtRef = useRef<string | undefined>(initialQuote?.updatedAt);
 
   // 1. Customer Selection
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(
@@ -152,7 +155,12 @@ export default function QuotationBuilder({ initialQuote }: QuotationBuilderProps
     toast.info("Suggestion dismissed from active stack");
   };
 
-  // 7. Confirmation Modal State
+  // 7. Deal Strategy Simulator Eligibility (Sales Rep on Draft Quotes)
+  const isSalesRep = activeUser.role === "SALES_REP";
+  const isDraftQuote = !initialQuote || initialQuote.status === "DRAFT";
+  const canSimulate = isSalesRep && isDraftQuote;
+
+  // 8. Confirmation Modal State
   const [confirmationModal, setConfirmationModal] = useState<{
     isOpen: boolean;
     quoteId: string;
@@ -441,6 +449,23 @@ export default function QuotationBuilder({ initialQuote }: QuotationBuilderProps
     isDirtyRef.current = true;
   }, [cartLines, selectedCustomerId, orderDiscountPercent]);
 
+  // Synchronize internal state whenever initialQuote changes (e.g. applied from Deal Strategy Simulator)
+  useEffect(() => {
+    if (initialQuote && initialQuote.updatedAt !== prevQuoteUpdatedAtRef.current) {
+      prevQuoteUpdatedAtRef.current = initialQuote.updatedAt;
+      if (initialQuote.lines && initialQuote.lines.length > 0) {
+        setCartLines(initialQuote.lines);
+      }
+      if (initialQuote.customerId) {
+        setSelectedCustomerId(initialQuote.customerId);
+      }
+      if (typeof initialQuote.orderDiscountPercent === "number") {
+        setOrderDiscountPercent(initialQuote.orderDiscountPercent);
+      }
+      isDirtyRef.current = false;
+    }
+  }, [initialQuote]);
+
   // Construct draft record helper
   const buildDraftRecord = useCallback((): QuotationRecord => {
     return {
@@ -540,10 +565,35 @@ export default function QuotationBuilder({ initialQuote }: QuotationBuilderProps
     router.push("/quotations");
   };
 
-  // Auto-save on unmount (e.g. sidebar navigation or browser back)
+  // Navigate to Dedicated Simulation Page with Draft State Preservation
+  const handleNavigateToSimulate = async () => {
+    isNavigatingToSimulate.current = true;
+    isDirtyRef.current = false;
+    try {
+      if (cartLines.length > 0) {
+        const draftRecord = buildDraftRecord();
+        if (initialQuote) {
+          await updateQuotation(draftRecord);
+        } else {
+          await addQuotation(draftRecord);
+        }
+      }
+    } catch (err) {
+      console.warn("Could not save draft before simulation navigation:", err);
+    }
+    router.push(`/quotations/${quoteId}/simulate`);
+  };
+
+  // Auto-save on unmount (only when dirty, not submitted, and not navigating to simulation)
   useEffect(() => {
     return () => {
-      if (!hasSubmittedRef.current && (isDirtyRef.current || !initialQuote) && latestDraftRef.current && latestDraftRef.current.lines.length > 0) {
+      if (
+        !hasSubmittedRef.current &&
+        !isNavigatingToSimulate.current &&
+        isDirtyRef.current &&
+        latestDraftRef.current &&
+        latestDraftRef.current.lines.length > 0
+      ) {
         if (initialQuote) {
           updateQuotation(latestDraftRef.current);
         } else {
@@ -574,6 +624,15 @@ export default function QuotationBuilder({ initialQuote }: QuotationBuilderProps
           : "MANAGER_REQUIRED"
         : "NONE";
 
+      const auditEntry: QuotationAuditEntry = {
+        id: `audit-${Date.now()}`,
+        action: "SUBMITTED",
+        actorName: activeUser.name,
+        actorRole: activeUser.role,
+        timestamp: new Date().toISOString(),
+        notes: `Submitted quote ${quoteId} for approval. Total: ${formatCurrency(financialTotals.grandTotal)}, Margin: ${financialTotals.blendedMargin}%, Risk: ${financialTotals.calculatedRiskScore}`,
+      };
+
       const newRecord: QuotationRecord = {
         id: quoteId,
         customerName: selectedCustomer.name,
@@ -593,22 +652,24 @@ export default function QuotationBuilder({ initialQuote }: QuotationBuilderProps
         riskScore: financialTotals.calculatedRiskScore,
         status: status,
         approvalRequirement: approvalRequirement,
+        approvalStage: routeType === "APPROVAL" ? "SALES_MANAGER" : "COMPLETED",
         repName: activeUser.name,
-        updatedAt: "Just now",
+        updatedAt: new Date().toISOString(),
         lines: cartLines,
         paymentTerms: selectedCustomer.paymentTerms,
+        auditTrail: [...(initialQuote?.auditTrail || []), auditEntry],
       };
-
-      if (initialQuote) {
-        await updateQuotation(newRecord);
-        toast.success(`Quotation ${quoteId} updated`);
-      } else {
-        await addQuotation(newRecord);
-        toast.success(`Quotation ${quoteId} saved to database successfully`);
-      }
 
       hasSubmittedRef.current = true;
       isDirtyRef.current = false;
+
+      // The quotation already exists (e.g. QT-2026-0041). Update its status (DRAFT -> IN_REVIEW / APPROVED) and persist to database
+      await updateQuotation(newRecord);
+      toast.success(
+        status === "IN_REVIEW"
+          ? `Quotation ${quoteId} submitted for manager approval`
+          : `Quotation ${quoteId} confirmed & approved`
+      );
 
       // Open confirmation feedback modal
       setConfirmationModal({
@@ -693,8 +754,20 @@ export default function QuotationBuilder({ initialQuote }: QuotationBuilderProps
           </p>
         </div>
 
-        {/* Customer Account Selector */}
-        <div className="flex items-center gap-3">
+        {/* Actions Strip & Customer Account Selector */}
+        <div className="flex flex-wrap items-center gap-3">
+          {canSimulate && (
+            <button
+              type="button"
+              onClick={handleNavigateToSimulate}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 bg-gradient-to-r from-amber-500/15 via-purple-500/15 to-blue-500/15 border border-amber-500/40 text-amber-700 dark:text-amber-300 hover:border-amber-500/70 hover:bg-amber-500/25 transition-all shadow-xs cursor-pointer"
+              title="Open Deal Strategy Simulator (Sales Rep Exclusive for Draft Quotations)"
+            >
+              <Zap className="w-4 h-4 text-amber-500 fill-amber-500/20 animate-pulse" />
+              <span>Simulate Deal Strategy ⚡</span>
+            </button>
+          )}
+
           <div className="bg-[var(--card-hover)] p-2.5 rounded-xl border border-[var(--border)] text-xs space-y-1">
             <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-1 font-medium">
               <Building2 className="w-3.5 h-3.5 text-[var(--primary)]" />
@@ -1330,6 +1403,19 @@ export default function QuotationBuilder({ initialQuote }: QuotationBuilderProps
                 </div>
               </div>
             </div>
+
+            {/* DEAL STRATEGY SIMULATION (DRAFT & SALES REP ONLY) */}
+            {canSimulate && (
+              <button
+                type="button"
+                onClick={handleNavigateToSimulate}
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 transition-all cursor-pointer shadow-2xs"
+                title="Open Deal Strategy Simulator"
+              >
+                <Zap className="w-4 h-4 text-amber-500" />
+                <span>Simulate Deal Strategy ⚡</span>
+              </button>
+            )}
 
             {/* ACTION BUTTONS: SAVE DRAFT & CONFIRM */}
             <div className="flex flex-col sm:flex-row items-center gap-2.5">

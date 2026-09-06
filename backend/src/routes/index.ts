@@ -8,6 +8,7 @@ import fulfillmentRouter from './fulfillment.route';
 import adminRouter from './admin.route';
 import billingRouter from './billing.route';
 import quotationRouter from './quotation.route';
+import simulationRouter from './simulation.route';
 import approvalRouter from './approval.route';
 
 const apiRouter = Router();

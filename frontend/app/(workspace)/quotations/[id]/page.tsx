@@ -21,7 +21,10 @@ export default function QuotationDetailPage({
 
   return (
     <div className="space-y-4">
-      <QuotationBuilder initialQuote={existingQuote} />
+      <QuotationBuilder
+        key={`${quoteId}-${existingQuote?.updatedAt || "draft"}-${existingQuote?.totalAmount || 0}`}
+        initialQuote={existingQuote}
+      />
     </div>
   );
 }
