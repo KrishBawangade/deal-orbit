@@ -19,10 +19,11 @@ export const splitOrderSchema = z.object({
 
 export const consolidateBackorderSchema = z.object({
   params: z.object({
-    id: z.string({ required_error: 'Backorder ID is required' }).uuid('Invalid backorder ID format'),
+    id: z.string().optional(),
+    orderId: z.string().optional(),
   }),
   body: z.object({
-    warehouseId: z.string().uuid('Invalid warehouse ID format').optional(),
+    warehouseId: z.string().optional(),
   }).optional(),
 });
 

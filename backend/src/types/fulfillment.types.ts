@@ -102,6 +102,7 @@ export interface IBackorder {
 export interface ISplitOrderResponse {
   orderId: string;
   orderNumber: string;
+  orderStatus?: OrderStatus;
   totalShipments: number;
   fulfillmentSplits: IFulfillmentSplit[];
   backorders: IBackorder[];

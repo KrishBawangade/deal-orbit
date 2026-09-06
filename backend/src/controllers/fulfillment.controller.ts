@@ -20,14 +20,26 @@ export class FulfillmentController {
     sendSuccess(res, result, 'Fulfillment feasibility evaluated successfully', 200);
   });
 
+  public listOrders = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+    const result = await this.service.listOrders();
+    sendSuccess(res, result, 'Sales orders retrieved successfully', 200);
+  });
+
   public splitOrder = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const result = await this.service.splitOrder(req.params.orderId);
+    const force = Boolean(req.body?.force || req.query?.force === 'true');
+    const result = await this.service.splitOrder(req.params.orderId, { force });
     sendSuccess(res, result, 'Sales order split into fulfillment shipments successfully', 200);
+  });
+
+  public resetOrderFulfillment = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const result = await this.service.resetOrderFulfillment(req.params.orderId);
+    sendSuccess(res, result, 'Sales order fulfillment reset successfully', 200);
   });
 
   public consolidateBackorder = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const warehouseId = req.body?.warehouseId;
-    const result = await this.service.consolidateBackorder(req.params.id, warehouseId);
+    const targetId = req.params.id || req.params.orderId;
+    const result = await this.service.consolidateBackorder(targetId, warehouseId);
     sendSuccess(res, result, 'Remaining backorder consolidated and dispatched', 200);
   });
 
@@ -39,6 +51,13 @@ export class FulfillmentController {
   public getOrderFulfillment = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const result = await this.service.getOrderFulfillment(req.params.orderId);
     sendSuccess(res, result, 'Order fulfillment details retrieved successfully', 200);
+  });
+
+  public seedFulfillment = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+    const { seedFulfillmentData } = await import('../utils/seedFulfillment');
+    await seedFulfillmentData();
+    const result = await this.service.listOrders();
+    sendSuccess(res, result, 'Fulfillment data seeded successfully in PostgreSQL', 200);
   });
 }
 

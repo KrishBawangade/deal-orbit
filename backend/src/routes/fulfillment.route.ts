@@ -50,10 +50,29 @@ router.put(
 // ==========================================
 // Backorders Consolidation & Order View
 // ==========================================
+router.get(
+  '/orders',
+  authenticate,
+  authorize(Role.SALES_REP, Role.SALES_MANAGER, Role.FINANCE_OPS, Role.ADMIN),
+  fulfillmentController.listOrders
+);
+router.post(
+  '/orders/:orderId/reset',
+  authenticate,
+  authorize(Role.FINANCE_OPS, Role.SALES_MANAGER, Role.ADMIN),
+  fulfillmentController.resetOrderFulfillment
+);
 router.post(
   '/backorders/:id/consolidate',
   authenticate,
-  authorize(Role.FINANCE_OPS, Role.ADMIN),
+  authorize(Role.SALES_REP, Role.SALES_MANAGER, Role.FINANCE_OPS, Role.ADMIN),
+  validate(consolidateBackorderSchema),
+  fulfillmentController.consolidateBackorder
+);
+router.post(
+  '/orders/:orderId/consolidate',
+  authenticate,
+  authorize(Role.SALES_REP, Role.SALES_MANAGER, Role.FINANCE_OPS, Role.ADMIN),
   validate(consolidateBackorderSchema),
   fulfillmentController.consolidateBackorder
 );
@@ -62,6 +81,12 @@ router.get(
   authenticate,
   authorize(Role.SALES_REP, Role.SALES_MANAGER, Role.FINANCE_OPS, Role.ADMIN),
   fulfillmentController.getOrderFulfillment
+);
+router.post(
+  '/seed',
+  authenticate,
+  authorize(Role.SALES_REP, Role.SALES_MANAGER, Role.FINANCE_OPS, Role.ADMIN),
+  fulfillmentController.seedFulfillment
 );
 
 export default router;

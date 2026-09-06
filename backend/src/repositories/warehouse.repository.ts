@@ -12,9 +12,13 @@ export interface IWarehouseRepository extends IBaseRepository<Warehouse, string,
 
 export class WarehouseRepository implements IWarehouseRepository {
   public async findById(id: string): Promise<Warehouse | null> {
-    return prisma.warehouse.findUnique({
+    const wh = await prisma.warehouse.findUnique({
       where: { id },
-    });
+    }).catch(() => null);
+    if (wh) return wh;
+    return prisma.warehouse.findUnique({
+      where: { code: id },
+    }).catch(() => null);
   }
 
   public async findByCode(code: string): Promise<Warehouse | null> {

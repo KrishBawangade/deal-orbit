@@ -210,7 +210,8 @@ export class FulfillmentRepository {
   }
 
   public async findBackorderById(id: string): Promise<any | null> {
-    return prisma.backorder.findUnique({
+    // 1. Direct backorder id lookup
+    let bo = await prisma.backorder.findUnique({
       where: { id },
       include: {
         product: true,
@@ -222,7 +223,72 @@ export class FulfillmentRepository {
           },
         },
       },
-    });
+    }).catch(() => null);
+
+    if (bo) return bo;
+
+    // 2. Lookup by salesOrderId for pending or replenished backorders
+    bo = await prisma.backorder.findFirst({
+      where: {
+        salesOrderId: id,
+        status: { in: [BackorderStatus.PENDING, BackorderStatus.REPLENISHED] },
+      },
+      include: {
+        product: true,
+        salesOrder: {
+          select: {
+            id: true,
+            orderNumber: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    }).catch(() => null);
+
+    if (bo) return bo;
+
+    // 3. Lookup by orderNumber (e.g. SO-2026-0045)
+    bo = await prisma.backorder.findFirst({
+      where: {
+        salesOrder: { orderNumber: id },
+        status: { in: [BackorderStatus.PENDING, BackorderStatus.REPLENISHED] },
+      },
+      include: {
+        product: true,
+        salesOrder: {
+          select: {
+            id: true,
+            orderNumber: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    }).catch(() => null);
+
+    if (bo) return bo;
+
+    // 4. Fallback to any backorder for this sales order id or orderNumber
+    return prisma.backorder.findFirst({
+      where: {
+        OR: [
+          { salesOrderId: id },
+          { salesOrder: { orderNumber: id } },
+        ],
+      },
+      include: {
+        product: true,
+        salesOrder: {
+          select: {
+            id: true,
+            orderNumber: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    }).catch(() => null);
   }
 
   public async updateBackorder(id: string, data: Prisma.BackorderUpdateInput): Promise<Backorder> {
@@ -304,7 +370,7 @@ export class FulfillmentRepository {
       const remainingBackorders = await tx.backorder.count({
         where: {
           salesOrderId: bo.salesOrderId,
-          status: BackorderStatus.PENDING,
+          status: { in: [BackorderStatus.PENDING, BackorderStatus.REPLENISHED] },
         },
       });
 

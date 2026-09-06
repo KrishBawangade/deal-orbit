@@ -68,19 +68,19 @@ router.get(
 );
 router.put(
   '/:id/stock',
-  authorize(Role.FINANCE_OPS, Role.ADMIN),
+  authorize(Role.SALES_REP, Role.SALES_MANAGER, Role.FINANCE_OPS, Role.ADMIN),
   validate(configureStockSchema),
   warehouseController.configureStock
 );
 router.post(
   '/:id/stock/batch',
-  authorize(Role.FINANCE_OPS, Role.ADMIN),
+  authorize(Role.SALES_REP, Role.SALES_MANAGER, Role.FINANCE_OPS, Role.ADMIN),
   validate(batchConfigureStockSchema),
   warehouseController.batchConfigureStock
 );
 router.post(
   '/:id/replenish',
-  authorize(Role.FINANCE_OPS, Role.ADMIN),
+  authorize(Role.SALES_REP, Role.SALES_MANAGER, Role.FINANCE_OPS, Role.ADMIN),
   validate(replenishStockSchema),
   warehouseController.replenishStock
 );

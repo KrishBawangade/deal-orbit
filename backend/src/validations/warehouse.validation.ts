@@ -64,10 +64,10 @@ export const batchConfigureStockSchema = z.object({
 
 export const replenishStockSchema = z.object({
   params: z.object({
-    id: z.string().uuid('Invalid warehouse ID format'),
+    id: z.string({ required_error: 'Warehouse ID is required' }).min(1, 'Warehouse ID cannot be empty'),
   }),
   body: z.object({
-    productId: z.string({ required_error: 'Product ID is required' }).uuid('Invalid product ID format'),
+    productId: z.string({ required_error: 'Product ID is required' }).min(1, 'Product ID cannot be empty'),
     quantityReceived: z.number().int().min(1, 'Quantity received must be at least 1'),
     newReplenishmentETA: z.union([z.string().datetime(), z.string().date(), z.null()]).optional(),
   }),
