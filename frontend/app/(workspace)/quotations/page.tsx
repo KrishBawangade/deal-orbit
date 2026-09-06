@@ -19,13 +19,12 @@ import {
   ChevronRight,
   TrendingUp,
   Layers,
-  RefreshCw,
 } from "lucide-react";
 
 export default function QuotationsPage() {
   const router = useRouter();
   const { activeUser } = useRole();
-  const { quotations, isLoading, refetchQuotations } = useQuotations();
+  const { quotations } = useQuotations();
   const [filterTab, setFilterTab] = useState<"ALL" | "DRAFT" | "IN_REVIEW">("ALL");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -63,17 +62,6 @@ export default function QuotationsPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => refetchQuotations()}
-            disabled={isLoading}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--card-hover)] text-[var(--text-main)] transition-colors cursor-pointer disabled:opacity-60 shadow-2xs"
-            title="Fetch live quotes from backend API"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-[var(--primary)]" : "text-[var(--text-muted)]"}`} />
-            <span>{isLoading ? "Syncing..." : "Sync Live API"}</span>
-          </button>
-
           {activeUser.role !== "FINANCE_OPS" && (
             <Link
               href="/quotations/new"
