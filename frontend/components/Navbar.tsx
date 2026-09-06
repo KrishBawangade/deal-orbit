@@ -71,6 +71,8 @@ export default function Navbar({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
+  const [hasToken, setHasToken] = useState(false);
+
   // Close profile dropdown on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -80,6 +82,21 @@ export default function Navbar({
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Check client-side authentication status
+  useEffect(() => {
+    try {
+      const token =
+        localStorage.getItem("dealorbit_token") ||
+        document.cookie
+          .split("; ")
+          .find((row) => row.startsWith("dealorbit_token="))
+          ?.split("=")[1];
+      setHasToken(!!token);
+    } catch {
+      // ignore
+    }
   }, []);
 
   // Determine active links based on variant, role and props
@@ -295,21 +312,31 @@ export default function Navbar({
           ) : (
             /* Landing Page Right Slot: Sign In & Get Started CTA */
             <div className="flex items-center gap-2.5">
-              <Link
-                href="/login"
-                replace
-                className="btn-ghost text-xs py-1.5 px-3 hidden sm:inline-flex"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/signup"
-                replace
-                className="btn-primary text-xs py-1.5 px-3.5 shadow-sm flex items-center gap-1.5"
-              >
-                <span>Get Started</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+              {hasToken ? (
+                <Link
+                  href={roleHomePath || "/quotations"}
+                  className="btn-primary text-xs py-1.5 px-3.5 shadow-sm flex items-center gap-1.5"
+                >
+                  <span>Go to Workspace</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="btn-ghost text-xs py-1.5 px-3 hidden sm:inline-flex"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="btn-primary text-xs py-1.5 px-3.5 shadow-sm flex items-center gap-1.5"
+                  >
+                    <span>Get Started</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </>
+              )}
             </div>
           )}
 
@@ -389,12 +416,11 @@ export default function Navbar({
           {variant === "landing" && (
             <div className="pt-2 border-t border-[var(--border-subtle)]/70 flex flex-col gap-2">
               <Link
-                href="/login"
-                replace
+                href={hasToken ? (roleHomePath || "/quotations") : "/login"}
                 onClick={() => setMobileMenuOpen(false)}
                 className="btn-primary text-center text-xs py-2 w-full justify-center"
               >
-                Get Started
+                {hasToken ? "Go to Workspace" : "Get Started"}
               </Link>
             </div>
           )}

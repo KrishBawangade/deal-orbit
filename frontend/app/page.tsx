@@ -1,7 +1,3 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { ROLE_HOME_PATHS } from "@/context/RoleContext";
-import type { Role } from "@/types";
 import Navbar from "@/components/Navbar";
 import OrbitalBackground from "@/components/OrbitalBackground";
 import HeroDealOrbit from "@/components/HeroDealOrbit";
@@ -11,21 +7,10 @@ import OperationsGovernance from "@/components/OperationsGovernance";
 import OrbitSignatureSection from "@/components/OrbitSignatureSection";
 import ExecutiveMetrics from "@/components/ExecutiveMetrics";
 import FinalCtaAndFooter from "@/components/FinalCtaAndFooter";
-import { AuthenticatedHomeRedirect } from "@/components/auth/AuthenticatedHomeRedirect";
 
 export default async function Home() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("dealorbit_token")?.value;
-  const role = (cookieStore.get("dealorbit_role")?.value as Role) || "SALES_REP";
-
-  if (token) {
-    const destination = ROLE_HOME_PATHS[role] || "/quotations";
-    redirect(destination);
-  }
-
   return (
     <div className="min-h-screen flex flex-col relative text-slate-900 selection:bg-blue-100 selection:text-blue-900">
-      <AuthenticatedHomeRedirect />
       {/* 1. PRD Subtle Animated Orbital Background */}
       <OrbitalBackground />
 
