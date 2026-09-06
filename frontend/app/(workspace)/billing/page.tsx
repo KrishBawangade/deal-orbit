@@ -1,12 +1,12 @@
 import { Metadata } from "next";
-import SubscriptionBillingScreen from "@/components/billing/SubscriptionBillingScreen";
+import SubscriptionContractsList from "@/components/billing/SubscriptionContractsList";
 
 export const metadata: Metadata = {
-  title: "Subscription & Billing Management | DealOrbit",
+  title: "Subscription & Billing Portfolio | DealOrbit",
   description:
-    "Finance and Operations screen for hybrid revenue architecture, one-time vs recurring line separation, upcoming billing schedules, mid-cycle proration, and automated credit notes.",
+    "Finance and Operations portfolio directory for enterprise hybrid revenue contracts, active SaaS subscriptions, proration engine, and automated credit notes.",
 };
 
 export default function BillingPage() {
-  return <SubscriptionBillingScreen />;
+  return <SubscriptionContractsList />;
 }
