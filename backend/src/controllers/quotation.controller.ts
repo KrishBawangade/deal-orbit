@@ -48,6 +48,18 @@ export class QuotationController {
     const quotation = await this.service.updateQuotation(req.params.id, req.body, req.user);
     sendSuccess(res, quotation, 'Quotation updated successfully', 200);
   });
+
+  public submitCounterOffer = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const tokenOrId = req.params.portalToken || req.params.id;
+    const result = await this.service.submitCounterOffer(tokenOrId, req.body);
+    sendSuccess(res, result, result.message, 200);
+  });
+
+  public confirmQuotation = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const tokenOrId = req.params.portalToken || req.params.id;
+    const result = await this.service.confirmQuotation(tokenOrId, req.body);
+    sendSuccess(res, result, result.message, 200);
+  });
 }
 
 export const quotationController = new QuotationController();

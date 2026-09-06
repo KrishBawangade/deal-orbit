@@ -227,7 +227,7 @@ export const seedQuotationsData = async (): Promise<void> => {
       salesRepId: salesRep.id,
       status: QuoteStatus.CUSTOMER_REVIEW,
       paymentTerms: 'Net 30',
-      portalToken: 'demo-token',
+      portalToken: 'cust-001',
       portalTokenExpiresAt: in30Days,
       expiresAt: in14Days,
       subtotalAmount: new Prisma.Decimal(1820000),

@@ -24,6 +24,7 @@ import {
   Calendar,
   Layers,
   HelpCircle,
+  ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuotations, QuotationRecord, QuotationLineItem } from "@/context/QuotationsContext";
@@ -34,11 +35,13 @@ import DigitalConfirmationModal from "./DigitalConfirmationModal";
 interface CustomerNegotiationPortalProps {
   token: string;
   initialQuoteId?: string;
+  onBackToHub?: () => void;
 }
 
 export default function CustomerNegotiationPortal({
   token,
   initialQuoteId,
+  onBackToHub,
 }: CustomerNegotiationPortalProps) {
   const {
     quotations,
@@ -74,8 +77,8 @@ export default function CustomerNegotiationPortal({
         <p className="text-xs text-[var(--text-muted)]">
           The requested negotiation token ({token}) could not be resolved to an active quotation.
         </p>
-        <Link href="/portal/demo-token" className="btn-primary text-xs py-2 px-4 inline-block">
-          Open Demo Proposal Room
+        <Link href="/portal/cust-001" className="btn-primary text-xs py-2 px-4 inline-block">
+          Open Acme Corp Proposal Room (cust-001)
         </Link>
       </div>
     );
@@ -189,6 +192,23 @@ export default function CustomerNegotiationPortal({
 
   return (
     <div className="space-y-6">
+      {/* Back to All Proposals Navigation Bar */}
+      {onBackToHub && (
+        <div className="flex items-center justify-between bg-[var(--card)] px-4 py-2.5 rounded-xl border border-[var(--border)] shadow-2xs">
+          <button
+            onClick={onBackToHub}
+            className="inline-flex items-center gap-2 text-xs font-bold text-[var(--primary)] hover:text-[var(--primary)]/80 transition-colors group cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            <span>← Back to All Proposals ({quote.customerName})</span>
+          </button>
+
+          <span className="text-[11px] text-[var(--text-muted)] font-medium">
+            Active Negotiation Room: <strong className="font-mono text-[var(--text-main)]">{quote.id}</strong>
+          </span>
+        </div>
+      )}
+
       {/* 1. Proposal Header Card with Status Badge */}
       <div className="bg-[var(--card)] rounded-2xl border border-[var(--border)] p-6 sm:p-8 shadow-xs relative overflow-hidden">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">

@@ -122,7 +122,7 @@ export default function Navbar({
   const resolvedLogoHref =
     logoHref ||
     (activeRole === "CUSTOMER"
-      ? "/portal/demo-token"
+      ? "/portal/cust-001"
       : variant === "workspace"
         ? roleHomePath || "/quotations"
         : "/");

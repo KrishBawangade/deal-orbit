@@ -135,7 +135,7 @@ export default function ApprovalConfirmationCard({
             <div className="flex items-center gap-2">
               {quotation.status === "APPROVED" && (
                 <Link
-                  href={`/portal/${quotation.portalToken || "demo-token"}`}
+                  href={`/portal/${quotation.customerId || quotation.portalToken || "cust-001"}`}
                   target="_blank"
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all"
                 >

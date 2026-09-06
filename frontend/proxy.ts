@@ -5,7 +5,7 @@ import type { NextRequest } from 'next/server';
  * DealOrbit Request & Route Authorization Proxy (Next.js 16 convention)
  * Enforces strict authentication and role-based path access:
  * 1. Unauthenticated users cannot access any application pages.
- * 2. CUSTOMER role is strictly restricted to /portal/* (e.g. /portal/demo-token).
+ * 2. CUSTOMER role is strictly restricted to /portal/* (e.g. /portal/cust-001).
  * 3. SALES_REP, SALES_MANAGER, FINANCE_OPS are barred from /admin and /portal.
  * 4. ADMIN has platform-wide access.
  */
@@ -25,7 +25,7 @@ export function proxy(request: NextRequest) {
   if (token && (isAuthRoute || pathname === '/')) {
     let dest = '/quotations';
     if (role === 'CUSTOMER') {
-      dest = '/portal/demo-token';
+      dest = '/portal/cust-001';
     } else if (role === 'ADMIN') {
       dest = '/admin';
     } else if (role === 'SALES_MANAGER' || role === 'FINANCE_OPS') {

@@ -8,8 +8,12 @@ import { Role } from '@prisma/client';
 
 const quotationRouter = Router();
 
-// Public / Token-authenticated Customer Negotiation Portal Route
+// Public / Token-authenticated Customer Negotiation Portal Routes
 quotationRouter.get('/portal/:portalToken', quotationController.getQuotationByPortalToken);
+quotationRouter.post('/portal/:portalToken/counter-offer', quotationController.submitCounterOffer);
+quotationRouter.post('/portal/:portalToken/confirm', quotationController.confirmQuotation);
+quotationRouter.post('/:id/counter-offer', quotationController.submitCounterOffer);
+quotationRouter.post('/:id/confirm', quotationController.confirmQuotation);
 
 // Protected Internal Workspace Routes
 quotationRouter.use(authenticate);

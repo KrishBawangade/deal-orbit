@@ -805,6 +805,255 @@ export class QuotationService {
 
     return this.getQuotationById(existing.id);
   }
+
+  /**
+   * Submit Customer Counter-Offer / Change Request & store in database
+   */
+  public async submitCounterOffer(
+    tokenOrId: string,
+    data: {
+      lineItemId?: string;
+      proposedDiscount: number;
+      proposedQuantity?: number;
+      message?: string;
+      authorName?: string;
+      authorRole?: string;
+    }
+  ) {
+    const quote = await prisma.quotation.findFirst({
+      where: {
+        OR: [
+          { id: tokenOrId },
+          { quoteNumber: tokenOrId },
+          { portalToken: tokenOrId },
+          { customerId: tokenOrId },
+          ...(tokenOrId === 'cust-001' || tokenOrId === 'demo-token'
+            ? [{ portalToken: 'cust-001' }, { portalToken: 'demo-token' }, { quoteNumber: 'QT-2026-0043' }]
+            : []),
+        ],
+      },
+      include: {
+        lines: true,
+        customer: true,
+        salesRep: true,
+      },
+    });
+
+    if (!quote) {
+      throw new AppError('Quotation not found for counter-offer submission', 404);
+    }
+
+    const proposedDiscount = Math.max(0, Math.min(100, Number(data.proposedDiscount) || 0));
+    const proposedQuantity = data.proposedQuantity ? Number(data.proposedQuantity) : undefined;
+    const authorName = data.authorName || 'David Chen (VP of Procurement)';
+    const authorRole = data.authorRole || 'CUSTOMER';
+
+    // Find targeted quotation line item
+    let targetLine = quote.lines.find((l) => l.id === data.lineItemId);
+    if (!targetLine && quote.lines.length > 0) {
+      targetLine = quote.lines[0];
+    }
+
+    let reApprovalRequired = false;
+    let newStatus: QuoteStatus = QuoteStatus.NEGOTIATING;
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Update targeted line item if present
+      if (targetLine) {
+        const newQty = proposedQuantity && proposedQuantity > 0 ? proposedQuantity : targetLine.quantity;
+        const effectiveCeiling = Number(targetLine.effectiveCeiling);
+        const isViolation = proposedDiscount > effectiveCeiling;
+        if (isViolation) {
+          reApprovalRequired = true;
+          newStatus = QuoteStatus.IN_REVIEW;
+        }
+
+        const unitPriceNum = Number(targetLine.unitPrice);
+        const netPerUnit = unitPriceNum * (1 - proposedDiscount / 100);
+        const netLinePrice = new Prisma.Decimal(netPerUnit * newQty);
+        const violationPoints = isViolation
+          ? new Prisma.Decimal(proposedDiscount - effectiveCeiling)
+          : new Prisma.Decimal(0);
+
+        await tx.quotationLine.update({
+          where: { id: targetLine.id },
+          data: {
+            quantity: newQty,
+            discountPercent: new Prisma.Decimal(proposedDiscount),
+            netLinePrice,
+            isViolation,
+            violationPoints,
+          },
+        });
+      }
+
+      // 2. Fetch updated lines and recalculate totals
+      const currentLines = await tx.quotationLine.findMany({
+        where: { quotationId: quote.id },
+      });
+
+      const subtotalAmount = currentLines.reduce(
+        (acc, l) => acc + Number(l.unitPrice) * l.quantity,
+        0
+      );
+      const totalNet = currentLines.reduce((acc, l) => acc + Number(l.netLinePrice), 0);
+      const totalDiscountAmount = subtotalAmount - totalNet;
+      const taxAmount = Math.round(totalNet * 0.18);
+      const grandTotal = totalNet + taxAmount;
+
+      const anyBreach = currentLines.some(
+        (l) => l.isViolation || Number(l.discountPercent) > Number(l.effectiveCeiling)
+      );
+      if (anyBreach) {
+        newStatus = QuoteStatus.IN_REVIEW;
+        reApprovalRequired = true;
+      }
+
+      await tx.quotation.update({
+        where: { id: quote.id },
+        data: {
+          status: newStatus,
+          subtotalAmount: new Prisma.Decimal(subtotalAmount),
+          totalDiscountAmount: new Prisma.Decimal(totalDiscountAmount),
+          taxAmount: new Prisma.Decimal(taxAmount),
+          grandTotal: new Prisma.Decimal(grandTotal),
+        },
+      });
+
+      // 3. Store in customer_negotiation_threads in database
+      await tx.customerNegotiationThread.create({
+        data: {
+          quotationId: quote.id,
+          lineItemId: targetLine?.id || null,
+          authorRole,
+          authorName,
+          message:
+            data.message ||
+            `Customer submitted counter-offer of ${proposedDiscount}% on ${targetLine?.id || 'proposal line'}.`,
+          proposedDiscount: new Prisma.Decimal(proposedDiscount),
+          proposedQuantity: proposedQuantity || null,
+        },
+      });
+    });
+
+    return {
+      reApprovalRequired,
+      quoteNumber: quote.quoteNumber,
+      status: newStatus,
+      message: reApprovalRequired
+        ? `Counter-offer (${proposedDiscount}%) submitted to database. Requires Managerial re-approval due to discount ceiling breach.`
+        : `Counter-offer (${proposedDiscount}%) successfully stored in database. Status updated to NEGOTIATING.`,
+    };
+  }
+
+  /**
+   * Confirm Quotation & Generate Sales Order in database
+   */
+  public async confirmQuotation(
+    tokenOrId: string,
+    data: {
+      signerName: string;
+      signerTitle: string;
+      acceptanceNotes?: string;
+    }
+  ) {
+    const quote = await prisma.quotation.findFirst({
+      where: {
+        OR: [
+          { id: tokenOrId },
+          { quoteNumber: tokenOrId },
+          { portalToken: tokenOrId },
+          { customerId: tokenOrId },
+          ...(tokenOrId === 'cust-001' || tokenOrId === 'demo-token'
+            ? [{ portalToken: 'cust-001' }, { portalToken: 'demo-token' }, { quoteNumber: 'QT-2026-0043' }]
+            : []),
+        ],
+      },
+      include: {
+        lines: true,
+        customer: true,
+        salesRep: true,
+      },
+    });
+
+    if (!quote) {
+      throw new AppError('Quotation not found for confirmation', 404);
+    }
+
+    const signerName = data.signerName || 'David Chen';
+    const signerTitle = data.signerTitle || 'VP of Procurement';
+    const acceptanceNotes = data.acceptanceNotes || 'Commercial proposal accepted and digitally signed.';
+
+    const hasBreach = quote.lines.some(
+      (l) => l.isViolation || Number(l.discountPercent) > Number(l.effectiveCeiling)
+    );
+
+    const routeType: 'FULFILLMENT' | 'RE_APPROVAL' = hasBreach ? 'RE_APPROVAL' : 'FULFILLMENT';
+    const nextStatus: QuoteStatus = hasBreach ? QuoteStatus.IN_REVIEW : QuoteStatus.ACCEPTED;
+    const numPart = quote.quoteNumber.replace(/[^0-9]/g, '').slice(-4) || '0043';
+    const salesOrderNumber = `SO-2026-${numPart}`;
+
+    let salesOrder: any = null;
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Update quotation status in database
+      await tx.quotation.update({
+        where: { id: quote.id },
+        data: {
+          status: nextStatus,
+        },
+      });
+
+      if (routeType === 'FULFILLMENT') {
+        // 2. Create/upsert SalesOrder in database
+        salesOrder = await tx.salesOrder.upsert({
+          where: { quotationId: quote.id },
+          update: {
+            status: 'PENDING',
+            totalAmount: quote.grandTotal,
+          },
+          create: {
+            orderNumber: salesOrderNumber,
+            quotationId: quote.id,
+            customerId: quote.customerId,
+            status: 'PENDING',
+            totalAmount: quote.grandTotal,
+          },
+        });
+
+        // 3. Store confirmation in customer_negotiation_threads
+        await tx.customerNegotiationThread.create({
+          data: {
+            quotationId: quote.id,
+            authorRole: 'CUSTOMER',
+            authorName: `${signerName} (${signerTitle})`,
+            message: `Digitally confirmed & signed by ${signerName} (${signerTitle}). Sales order ${salesOrderNumber} created in database. ${acceptanceNotes}`,
+          },
+        });
+      } else {
+        // 3b. Store re-approval attempt in customer_negotiation_threads
+        await tx.customerNegotiationThread.create({
+          data: {
+            quotationId: quote.id,
+            authorRole: 'CUSTOMER',
+            authorName: `${signerName} (${signerTitle})`,
+            message: `Procurement attempted confirmation. Because terms exceed discount ceilings, quotation was re-routed to Manager for B4 Governance Review.`,
+          },
+        });
+      }
+    });
+
+    return {
+      status: nextStatus,
+      routeType,
+      salesOrderNumber: routeType === 'FULFILLMENT' ? salesOrderNumber : undefined,
+      salesOrder,
+      message:
+        routeType === 'FULFILLMENT'
+          ? `Quotation confirmed! Sales Order ${salesOrderNumber} generated in database.`
+          : `Quotation terms exceed discount ceilings. Re-routed to Manager for B4 review.`,
+    };
+  }
 }
 
 export const quotationService = new QuotationService();

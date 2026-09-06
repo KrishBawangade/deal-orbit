@@ -20,7 +20,7 @@ function PortalShell({ children }: { children: React.ReactNode }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
-  const portalHome = pathname && pathname.startsWith("/portal") ? pathname : "/portal/demo-token";
+  const portalHome = pathname && pathname.startsWith("/portal") ? pathname : "/portal/cust-001";
 
   // Close profile dropdown on outside click
   useEffect(() => {

@@ -62,7 +62,7 @@ export const ROLE_HOME_PATHS: Record<Role, string> = {
   SALES_MANAGER: "/approvals",
   FINANCE_OPS: "/approvals",
   ADMIN: "/admin",
-  CUSTOMER: "/portal/demo-token",
+  CUSTOMER: "/portal/cust-001",
 };
 
 export interface RoleContextType {

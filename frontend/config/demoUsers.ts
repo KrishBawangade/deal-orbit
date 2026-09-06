@@ -113,7 +113,7 @@ export const DEMO_USERS: IDemoUser[] = [
       "Chat directly with sales representatives",
       "Electronically sign and accept quotations",
     ],
-    defaultPath: "/portal/demo-token",
+    defaultPath: "/portal/cust-001",
   },
   {
     id: "demo-user-admin",

@@ -102,7 +102,7 @@ const INITIAL_QUOTATIONS: QuotationRecord[] = [
     repName: "Sam Seller",
     updatedAt: "10 mins ago",
     paymentTerms: "Net 30",
-    portalToken: "demo-token",
+    portalToken: "cust-001",
     expiresAt: "2026-09-19",
     auditTrail: [
       {
@@ -170,6 +170,150 @@ const INITIAL_QUOTATIONS: QuotationRecord[] = [
         lineMarginPercent: -1.6,
         isRecurring: false,
         billingFrequency: "ONE_TIME",
+      },
+    ],
+  },
+  {
+    id: "QT-2026-0045",
+    customerName: "Acme Corp",
+    customerId: "cust-001",
+    tier: "GOLD",
+    tierCeiling: 15,
+    lineItemsCount: 2,
+    subtotal: "₹9,50,000",
+    subtotalAmount: 950000,
+    discountAmount: 95000,
+    orderDiscountPercent: 0,
+    taxAmount: 153900,
+    total: "₹10,08,900",
+    totalAmount: 1008900,
+    blendedMargin: 24.5,
+    marginStatus: "HIGH",
+    riskScore: 22.0,
+    status: "APPROVED",
+    approvalRequirement: "MANAGER_REQUIRED",
+    approvalStage: "COMPLETED",
+    repName: "Sam Seller",
+    updatedAt: "1 day ago",
+    paymentTerms: "Net 30",
+    portalToken: "acme-cloud",
+    expiresAt: "2026-09-28",
+    auditTrail: [
+      {
+        id: "audit-045-02",
+        action: "APPROVED_FINAL",
+        actorName: "Marcus Vance",
+        actorRole: "SALES_MANAGER",
+        timestamp: "Yesterday at 16:45",
+        notes: "Approved cloud modernization infrastructure package with standard 10% Gold tier discount.",
+      },
+      {
+        id: "audit-045-01",
+        action: "SUBMITTED",
+        actorName: "Sam Seller",
+        actorRole: "SALES_REP",
+        timestamp: "2 days ago at 10:15",
+        notes: "Cloud infrastructure compute instances and perimeter security firewall submitted for Acme Corp.",
+      },
+    ],
+    negotiationMessages: [],
+    lines: [
+      {
+        id: "line-45-01",
+        productId: "prod-sw-02",
+        sku: "SW-CLOUD-NODE",
+        name: "Enterprise Managed Kubernetes Cluster (4 Nodes / 128GB)",
+        category: "SOFTWARE",
+        quantity: 2,
+        unitPrice: 350000,
+        unitCost: 240000,
+        discountPercent: 10.0,
+        effectiveCeiling: 15.0,
+        isViolation: false,
+        violationPoints: 0,
+        netLineTotal: 630000,
+        lineMarginPercent: 23.8,
+        isRecurring: true,
+        billingFrequency: "MONTHLY",
+      },
+      {
+        id: "line-45-02",
+        productId: "prod-srv-04",
+        sku: "SRV-SEC-AUDIT",
+        name: "Zero-Trust Perimeter & Cloud Security Architecture Review",
+        category: "SERVICES",
+        quantity: 1,
+        unitPrice: 250000,
+        unitCost: 170000,
+        discountPercent: 10.0,
+        effectiveCeiling: 15.0,
+        isViolation: false,
+        violationPoints: 0,
+        netLineTotal: 225000,
+        lineMarginPercent: 24.4,
+        isRecurring: false,
+        billingFrequency: "ONE_TIME",
+      },
+    ],
+  },
+  {
+    id: "QT-2026-0039",
+    customerName: "Acme Corp",
+    customerId: "cust-001",
+    tier: "GOLD",
+    tierCeiling: 15,
+    lineItemsCount: 1,
+    subtotal: "₹4,00,000",
+    subtotalAmount: 400000,
+    discountAmount: 20000,
+    orderDiscountPercent: 0,
+    taxAmount: 68400,
+    total: "₹4,48,400",
+    totalAmount: 448400,
+    blendedMargin: 28.0,
+    marginStatus: "HIGH",
+    riskScore: 12.0,
+    status: "ACCEPTED",
+    approvalRequirement: "NONE",
+    approvalStage: "COMPLETED",
+    repName: "Sam Seller",
+    updatedAt: "Aug 28, 2026",
+    paymentTerms: "Net 30",
+    portalToken: "acme-support",
+    expiresAt: "2026-09-10",
+    salesOrderNumber: "SO-2026-0882",
+    signerName: "David Chen",
+    signerTitle: "VP of Procurement",
+    confirmedAt: "Aug 28, 2026",
+    auditTrail: [
+      {
+        id: "audit-039-01",
+        action: "DIGITALLY_CONFIRMED",
+        actorName: "David Chen",
+        actorRole: "CUSTOMER",
+        timestamp: "Aug 28, 2026 at 14:20",
+        notes: "Proposal accepted and electronically signed by David Chen (VP of Procurement). Fulfillment dispatched.",
+      },
+    ],
+    negotiationMessages: [],
+    lines: [
+      {
+        id: "line-39-01",
+        productId: "prod-srv-05",
+        sku: "SRV-SLA-PLATINUM",
+        name: "24/7 Mission-Critical SLA Enterprise Support (Annual)",
+        category: "SERVICES",
+        quantity: 1,
+        unitPrice: 400000,
+        unitCost: 280000,
+        discountPercent: 5.0,
+        effectiveCeiling: 15.0,
+        isViolation: false,
+        violationPoints: 0,
+        netLineTotal: 380000,
+        lineMarginPercent: 26.3,
+        isRecurring: true,
+        billingFrequency: "ANNUAL",
       },
     ],
   },
@@ -556,6 +700,7 @@ interface QuotationsContextType {
   updateQuotation: (quote: QuotationRecord) => Promise<QuotationRecord | void> | void;
   getQuotation: (id: string) => QuotationRecord | undefined;
   getQuotationByToken: (token: string) => QuotationRecord | undefined;
+  getQuotationsByCustomer: (identifier: string) => QuotationRecord[];
   getNextQuoteId: () => string;
   submitCounterOffer: (
     quoteId: string,
@@ -615,7 +760,7 @@ interface QuotationsContextType {
 
 const QuotationsContext = createContext<QuotationsContextType | null>(null);
 
-const STORAGE_KEY = "dealorbit_quotations_data_v4";
+const STORAGE_KEY = "dealorbit_quotations_data_v5";
 
 export function QuotationsProvider({ children }: { children: React.ReactNode }) {
   const [quotations, setQuotations] = useState<QuotationRecord[]>(INITIAL_QUOTATIONS);
@@ -869,22 +1014,75 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
   const getQuotationByToken = useCallback(
     (token: string) => {
       const trimmed = token.trim().toLowerCase();
-      // First check direct portalToken match
+
+      // 1. Direct customer ID match (e.g. "cust-001", "cust-002")
+      const byCustomerId = quotations.find(
+        (q) => q.customerId?.toLowerCase() === trimmed
+      );
+      if (byCustomerId) return byCustomerId;
+
+      // 2. Direct portalToken match (e.g. "cust-001", "acme-corp")
       const byPortalToken = quotations.find(
         (q) => q.portalToken?.toLowerCase() === trimmed
       );
       if (byPortalToken) return byPortalToken;
 
-      // Second check quote ID
+      // 3. Customer name slug match (e.g. "Acme Corp" -> "acme-corp")
+      const byCustomerSlug = quotations.find((q) => {
+        const slug = q.customerName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+        return slug === trimmed;
+      });
+      if (byCustomerSlug) return byCustomerSlug;
+
+      // 4. Direct quote ID match (e.g. "qt-2026-0043")
       const byId = quotations.find((q) => q.id.toLowerCase() === trimmed);
       if (byId) return byId;
 
-      // Third fallback: If demo-token or demo, return QT-2026-0043 or first quote
-      if (trimmed.includes("demo") || trimmed === "default") {
-        return quotations.find((q) => q.id === "QT-2026-0043") || quotations[0];
+      // 5. Fallback: If cust-001, demo-token, default, or acme-corp, return QT-2026-0043 or first quote
+      if (
+        trimmed.includes("cust") ||
+        trimmed.includes("demo") ||
+        trimmed === "default" ||
+        trimmed === "acme-corp"
+      ) {
+        return quotations.find((q) => q.id === "QT-2026-0043" || q.customerId === "cust-001") || quotations[0];
       }
 
       return quotations[0];
+    },
+    [quotations]
+  );
+
+  const getQuotationsByCustomer = useCallback(
+    (identifier: string) => {
+      const trimmed = identifier.trim().toLowerCase();
+      // 1. Direct customer ID, portal token, or slug matching
+      const matches = quotations.filter((q) => {
+        const cId = q.customerId?.toLowerCase();
+        const pTok = q.portalToken?.toLowerCase();
+        const slug = q.customerName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+        return (
+          cId === trimmed ||
+          pTok === trimmed ||
+          slug === trimmed ||
+          (trimmed.includes("cust-001") && (cId === "cust-001" || slug === "acme-corp"))
+        );
+      });
+      if (matches.length > 0) return matches;
+
+      // 2. If user passed a quote ID (e.g. QT-2026-0043), return all quotes for that quote's customer
+      const targetQuote = quotations.find((q) => q.id.toLowerCase() === trimmed);
+      if (targetQuote) {
+        return quotations.filter(
+          (q) => q.customerId === targetQuote.customerId || q.customerName === targetQuote.customerName
+        );
+      }
+
+      // 3. Fallback to Acme Corp quotes
+      const acmeQuotes = quotations.filter(
+        (q) => q.customerId === "cust-001" || q.customerName.toLowerCase().includes("acme")
+      );
+      return acmeQuotes.length > 0 ? acmeQuotes : quotations.slice(0, 3);
     },
     [quotations]
   );
@@ -1002,6 +1200,26 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
         })
       );
 
+      // Persist to PostgreSQL backend API
+      (async () => {
+        try {
+          await fetch(`${siteConfig.apiUrl}/api/quotations/portal/${quoteId}/counter-offer`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              lineItemId,
+              proposedDiscount,
+              proposedQuantity,
+              message,
+              authorName: "David Chen (VP of Procurement)",
+              authorRole: "CUSTOMER",
+            }),
+          }).catch(() => null);
+        } catch (apiErr) {
+          console.warn("Backend counter-offer API sync notice:", apiErr);
+        }
+      })();
+
       return { reApprovalRequired, quoteNumber };
     },
     []
@@ -1111,6 +1329,23 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
           }
         })
       );
+
+      // Persist confirmation & sales order generation to PostgreSQL backend API
+      (async () => {
+        try {
+          await fetch(`${siteConfig.apiUrl}/api/quotations/portal/${quoteId}/confirm`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              signerName,
+              signerTitle,
+              acceptanceNotes,
+            }),
+          }).catch(() => null);
+        } catch (apiErr) {
+          console.warn("Backend confirmation API sync notice:", apiErr);
+        }
+      })();
 
       return {
         status: resultStatus,
@@ -1377,6 +1612,7 @@ export function QuotationsProvider({ children }: { children: React.ReactNode }) 
         updateQuotation,
         getQuotation,
         getQuotationByToken,
+        getQuotationsByCustomer,
         getNextQuoteId,
         submitCounterOffer,
         addLineComment,

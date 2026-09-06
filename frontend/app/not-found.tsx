@@ -54,10 +54,10 @@ export default function NotFound() {
         {/* Bottom Helpful Links */}
         <div className="mt-8 pt-5 border-t border-[var(--border-subtle)] flex items-center justify-center gap-4 text-xs text-[var(--text-muted)]">
           <Link
-            href="/portal/demo-token"
+            href="/portal/cust-001"
             className="hover:text-[var(--primary)] transition-colors"
           >
-            Customer Portal Room
+            Customer Portal Room (cust-001)
           </Link>
           <span>•</span>
           <Link
