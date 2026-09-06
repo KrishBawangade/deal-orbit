@@ -11,42 +11,60 @@ export interface ISubscriptionFilter {
 
 export class SubscriptionRepository {
   public async findById(id: string): Promise<any | null> {
-    return prisma.subscription.findUnique({
-      where: { id },
-      include: {
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            contactEmail: true,
-            tier: true,
-          },
-        },
-        plan: {
-          include: {
-            prorationRule: true,
-            cancellationRule: true,
-          },
-        },
-        product: {
-          select: {
-            id: true,
-            sku: true,
-            name: true,
-            basePrice: true,
-            unit: true,
-          },
-        },
-        billingSchedules: {
-          orderBy: { scheduledDate: 'asc' },
-        },
-        prorationAdjustments: {
-          orderBy: { createdAt: 'desc' },
-        },
-        creditNotes: {
-          orderBy: { createdAt: 'desc' },
+    const includeConfig = {
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          contactEmail: true,
+          tier: true,
         },
       },
+      salesOrder: {
+        select: {
+          id: true,
+          orderNumber: true,
+        },
+      },
+      plan: {
+        include: {
+          prorationRule: true,
+          cancellationRule: true,
+        },
+      },
+      product: {
+        select: {
+          id: true,
+          sku: true,
+          name: true,
+          basePrice: true,
+          unit: true,
+        },
+      },
+      billingSchedules: {
+        orderBy: { scheduledDate: 'asc' as const },
+      },
+      prorationAdjustments: {
+        orderBy: { createdAt: 'desc' as const },
+      },
+      creditNotes: {
+        orderBy: { createdAt: 'desc' as const },
+      },
+    };
+
+    try {
+      const sub = await prisma.subscription.findUnique({
+        where: { id },
+        include: includeConfig,
+      });
+      if (sub) return sub;
+    } catch {
+      // id might not be a valid UUID format
+    }
+
+    return prisma.subscription.findUnique({
+      where: { contractNumber: id },
+      include: includeConfig,
     });
   }
 

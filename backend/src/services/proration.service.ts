@@ -235,7 +235,6 @@ export class ProrationService {
         where: {
           subscriptionId: subscription.id,
           isProcessed: false,
-          scheduledDate: { gt: effectiveDate },
         },
         data: {
           amount: new Prisma.Decimal(newRate),

@@ -68,10 +68,10 @@ export const updateRulesSchema = z.object({
 
 export const modifySubscriptionSchema = z.object({
   params: z.object({
-    id: z.string().uuid('Invalid subscription ID'),
+    id: z.string().min(1, 'Subscription ID or contract number is required'),
   }),
   body: z.object({
-    newPlanId: z.string().uuid().optional(),
+    newPlanId: z.string().optional(),
     newPlanRate: z.number().positive().optional(),
     newQuantity: z.number().int().positive().optional(),
     effectiveDate: z.string().datetime({ offset: true }).or(z.string()).optional(),
@@ -81,7 +81,7 @@ export const modifySubscriptionSchema = z.object({
 
 export const cancelSubscriptionSchema = z.object({
   params: z.object({
-    id: z.string().uuid('Invalid subscription ID'),
+    id: z.string().min(1, 'Subscription ID or contract number is required'),
   }),
   body: z.object({
     effectiveDate: z.string().datetime({ offset: true }).or(z.string()).optional(),

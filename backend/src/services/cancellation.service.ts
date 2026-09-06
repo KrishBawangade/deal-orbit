@@ -86,7 +86,6 @@ export class CancellationService {
         where: {
           subscriptionId: subscription.id,
           isProcessed: false,
-          scheduledDate: { gte: effectiveDate },
         },
       });
 
