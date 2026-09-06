@@ -237,12 +237,6 @@ export default function CustomerQuotationsHub({
           className={`cursor-pointer rounded-xl border p-4 transition-all ${
             statusFilter === "ALL"
               ? "bg-[var(--card)] border-[var(--primary)] ring-2 ring-[var(--primary)]/20 shadow-xs"
-        {/* Total Quotes */}
-        <div
-          onClick={() => setStatusFilter("ALL")}
-          className={`cursor-pointer rounded-xl border p-4 transition-all ${
-            statusFilter === "ALL"
-              ? "bg-[var(--card)] border-[var(--primary)] ring-2 ring-[var(--primary)]/20 shadow-xs"
               : "bg-[var(--card)] border-[var(--border)] hover:border-[var(--primary)]/40"
           }`}
         >
