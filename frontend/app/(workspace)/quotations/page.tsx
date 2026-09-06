@@ -19,17 +19,27 @@ import {
   ChevronRight,
   TrendingUp,
   Layers,
+  ChevronLeft,
 } from "lucide-react";
+
+type FilterTabType = "ALL" | "DRAFT" | "IN_REVIEW" | "CUSTOMER_REVIEW" | "APPROVED" | "ACCEPTED" | "REJECTED";
 
 export default function QuotationsPage() {
   const router = useRouter();
   const { activeUser } = useRole();
   const { quotations } = useQuotations();
-  const [filterTab, setFilterTab] = useState<"ALL" | "DRAFT" | "IN_REVIEW">("ALL");
+  const [filterTab, setFilterTab] = useState<FilterTabType>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
 
   const draftCount = quotations.filter((q) => q.status === "DRAFT").length;
   const inReviewCount = quotations.filter((q) => q.status === "IN_REVIEW").length;
+  const customerReviewCount = quotations.filter((q) => q.status === "CUSTOMER_REVIEW" || q.status === "NEGOTIATING").length;
+  const approvedCount = quotations.filter((q) => q.status === "APPROVED").length;
+  const acceptedCount = quotations.filter((q) => q.status === "ACCEPTED" || q.status === "CONVERTED_TO_ORDER").length;
+  const rejectedCount = quotations.filter((q) => q.status === "REJECTED" || q.status === "EXPIRED").length;
+
   const totalPipelineValue = quotations.reduce((sum, q) => sum + (q.totalAmount || 0), 0);
   const avgMargin =
     quotations.length > 0
@@ -37,7 +47,13 @@ export default function QuotationsPage() {
       : "0.0";
 
   const filteredQuotes = quotations.filter((q) => {
-    if (filterTab !== "ALL" && q.status !== filterTab) return false;
+    if (filterTab === "DRAFT" && q.status !== "DRAFT") return false;
+    if (filterTab === "IN_REVIEW" && q.status !== "IN_REVIEW") return false;
+    if (filterTab === "CUSTOMER_REVIEW" && q.status !== "CUSTOMER_REVIEW" && q.status !== "NEGOTIATING") return false;
+    if (filterTab === "APPROVED" && q.status !== "APPROVED") return false;
+    if (filterTab === "ACCEPTED" && q.status !== "ACCEPTED" && q.status !== "CONVERTED_TO_ORDER") return false;
+    if (filterTab === "REJECTED" && q.status !== "REJECTED" && q.status !== "EXPIRED") return false;
+
     if (searchQuery.trim()) {
       const qLower = searchQuery.toLowerCase();
       return (
@@ -47,6 +63,13 @@ export default function QuotationsPage() {
     }
     return true;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredQuotes.length / pageSize));
+  const validCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedQuotes = filteredQuotes.slice(
+    (validCurrentPage - 1) * pageSize,
+    validCurrentPage * pageSize
+  );
 
   return (
     <div className="space-y-6">
@@ -140,25 +163,25 @@ export default function QuotationsPage() {
       </div>
 
       {/* 2. Filter Tabs & Search Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[var(--card)]/60 p-2 rounded-xl border border-[var(--border)]">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-[var(--card)]/60 p-2.5 rounded-xl border border-[var(--border)]">
         {/* Filter Pills */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
           <button
             type="button"
-            onClick={() => setFilterTab("ALL")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+            onClick={() => { setFilterTab("ALL"); setCurrentPage(1); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
               filterTab === "ALL"
                 ? "bg-[var(--primary)] text-white shadow-2xs"
                 : "text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--card)]"
             }`}
           >
-            All Proposals ({quotations.length})
+            All Deals ({quotations.length})
           </button>
 
           <button
             type="button"
-            onClick={() => setFilterTab("DRAFT")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+            onClick={() => { setFilterTab("DRAFT"); setCurrentPage(1); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
               filterTab === "DRAFT"
                 ? "bg-[var(--primary)] text-white shadow-2xs"
                 : "text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--card)]"
@@ -169,8 +192,8 @@ export default function QuotationsPage() {
 
           <button
             type="button"
-            onClick={() => setFilterTab("IN_REVIEW")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+            onClick={() => { setFilterTab("IN_REVIEW"); setCurrentPage(1); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
               filterTab === "IN_REVIEW"
                 ? "bg-[var(--primary)] text-white shadow-2xs"
                 : "text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--card)]"
@@ -178,23 +201,74 @@ export default function QuotationsPage() {
           >
             Under Review ({inReviewCount})
           </button>
+
+          <button
+            type="button"
+            onClick={() => { setFilterTab("CUSTOMER_REVIEW"); setCurrentPage(1); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+              filterTab === "CUSTOMER_REVIEW"
+                ? "bg-[var(--primary)] text-white shadow-2xs"
+                : "text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--card)]"
+            }`}
+          >
+            Client Review ({customerReviewCount})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setFilterTab("APPROVED"); setCurrentPage(1); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+              filterTab === "APPROVED"
+                ? "bg-[var(--primary)] text-white shadow-2xs"
+                : "text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--card)]"
+            }`}
+          >
+            Approved ({approvedCount})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setFilterTab("ACCEPTED"); setCurrentPage(1); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+              filterTab === "ACCEPTED"
+                ? "bg-[var(--primary)] text-white shadow-2xs"
+                : "text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--card)]"
+            }`}
+          >
+            Converted ({acceptedCount})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setFilterTab("REJECTED"); setCurrentPage(1); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+              filterTab === "REJECTED"
+                ? "bg-[var(--primary)] text-white shadow-2xs"
+                : "text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--card)]"
+            }`}
+          >
+            Rejected ({rejectedCount})
+          </button>
         </div>
 
         {/* Search input */}
-        <div className="relative w-full sm:w-64">
+        <div className="relative w-full lg:w-72 shrink-0">
           <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
           <input
             type="text"
             placeholder="Search by quote # or customer..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
             className="w-full bg-[var(--card)] border border-[var(--border)] rounded-lg pl-8 pr-3 py-1.5 text-xs text-[var(--text-main)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
           />
         </div>
       </div>
 
       {/* 3. Quotations List Table */}
-      <div className="card-glass rounded-2xl border border-[var(--border)] overflow-hidden">
+      <div className="card-glass rounded-2xl border border-[var(--border)] overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-[var(--card)]/70 text-[var(--text-muted)] uppercase tracking-wider text-[10px] border-b border-[var(--border-subtle)]">
@@ -210,7 +284,7 @@ export default function QuotationsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border-subtle)]/70 text-[var(--text-body)]">
-              {filteredQuotes.length === 0 ? (
+              {paginatedQuotes.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-12 text-center text-[var(--text-muted)]">
                     <div className="flex flex-col items-center justify-center gap-2">
@@ -223,7 +297,7 @@ export default function QuotationsPage() {
                   </td>
                 </tr>
               ) : (
-                filteredQuotes.map((q) => (
+                paginatedQuotes.map((q) => (
                   <tr
                     key={q.id}
                     onClick={() => router.push(`/quotations/${q.id}`)}
@@ -366,6 +440,43 @@ export default function QuotationsPage() {
             </tbody>
           </table>
         </div>
+
+        {/* 4. Pagination Footer */}
+        {filteredQuotes.length > 0 && (
+          <div className="px-4 py-3 border-t border-[var(--border-subtle)] bg-[var(--card)]/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--text-muted)]">
+            <div>
+              Showing <span className="font-semibold text-[var(--text-main)]">{(validCurrentPage - 1) * pageSize + 1}</span> to{" "}
+              <span className="font-semibold text-[var(--text-main)]">{Math.min(validCurrentPage * pageSize, filteredQuotes.length)}</span> of{" "}
+              <span className="font-semibold text-[var(--text-main)]">{filteredQuotes.length}</span> deals
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={validCurrentPage <= 1}
+                className="px-2.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--card)]/80 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>Prev</span>
+              </button>
+
+              <div className="px-3 py-1 font-mono text-xs text-[var(--text-main)]">
+                Page {validCurrentPage} of {totalPages}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={validCurrentPage >= totalPages}
+                className="px-2.5 py-1 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--card)]/80 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <span>Next</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

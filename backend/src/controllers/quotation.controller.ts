@@ -11,7 +11,7 @@ export class QuotationController {
     const { status, customerId, salesRepId, search, page, limit } = req.query;
 
     const pageNum = page ? parseInt(page as string, 10) : 1;
-    const limitNum = limit ? parseInt(limit as string, 10) : 50;
+    const limitNum = limit ? parseInt(limit as string, 10) : 300;
     const skip = (pageNum - 1) * limitNum;
 
     const result = await this.service.getQuotations(
